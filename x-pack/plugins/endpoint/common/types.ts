@@ -264,17 +264,7 @@ export interface EndpointMetadata {
     version: string;
     id: string;
   };
-  host: {
-    id: string;
-    hostname: string;
-    ip: string[];
-    mac: string[];
-    os: {
-      name: string;
-      full: string;
-      version: string;
-    };
-  };
+  host: HostFields;
 }
 
 /**
