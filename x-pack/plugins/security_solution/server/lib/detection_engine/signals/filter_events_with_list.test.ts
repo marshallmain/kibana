@@ -107,6 +107,59 @@ describe('filterEventsAgainstList', () => {
       );
       expect(res.hits.hits.length).toEqual(2);
     });
+    it('should return no entries with complementary lists', async () => {
+      const exceptionItem = getExceptionListItemSchemaMock();
+      exceptionItem.entries = [
+        {
+          field: 'source.ip',
+          operator: 'included',
+          type: 'list',
+          list: {
+            id: 'ci-badguys.txt',
+            type: 'ip',
+          },
+        },
+      ];
+      const exceptionItem2 = getExceptionListItemSchemaMock();
+      exceptionItem2.id = '2';
+      exceptionItem2.item_id = 'endpoint_item_2';
+      exceptionItem2.entries = [
+        {
+          field: 'source.ip',
+          operator: 'excluded',
+          type: 'list',
+          list: {
+            id: 'ci-badguys.txt',
+            type: 'ip',
+          },
+        },
+      ];
+      listClient.getListItemByValues = jest.fn(({ value }) =>
+        Promise.resolve(
+          value.slice(0, 2).map((item) => ({
+            ...getListItemResponseMock(),
+            value: item,
+          }))
+        )
+      );
+      const res = await filterEventsAgainstList({
+        logger: mockLogger,
+        listClient,
+        exceptionsList: [exceptionItem, exceptionItem2],
+        eventSearchResult: repeatedSearchResultsWithSortId(4, 4, someGuids.slice(0, 3), [
+          '1.1.1.1',
+          '2.2.2.2',
+          '3.3.3.3',
+          '7.7.7.7',
+        ]),
+        buildRuleMessage,
+      });
+      expect((listClient.getListItemByValues as jest.Mock).mock.calls[0][0].type).toEqual('ip');
+      expect((listClient.getListItemByValues as jest.Mock).mock.calls[0][0].listId).toEqual(
+        'ci-badguys.txt'
+      );
+      expect(res.hits.hits.length).toEqual(0);
+    });
   });
   describe('operator type is excluded', () => {
     it('should respond with empty list if no items match value list', async () => {
