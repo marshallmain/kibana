@@ -5,7 +5,7 @@
  */
 
 import { QueryAlerts, AlertSearchResponse, BasicSignals, AlertsIndex, Privilege } from '../types';
-import { alertsMock, mockSignalIndex, mockUserPrivilege } from '../mock';
+import { alertsMock, mockSignalIndex, mockUserPrivilege, mockOutdatedSignalIndex } from '../mock';
 
 export const fetchQueryAlerts = async <Hit, Aggregations>({
   query,
@@ -15,6 +15,9 @@ export const fetchQueryAlerts = async <Hit, Aggregations>({
 
 export const getSignalIndex = async ({ signal }: BasicSignals): Promise<AlertsIndex> =>
   Promise.resolve(mockSignalIndex);
+
+export const getOutdatedSignalIndex = async ({ signal }: BasicSignals): Promise<AlertsIndex> =>
+  Promise.resolve(mockOutdatedSignalIndex);
 
 export const getUserPrivilege = async ({ signal }: BasicSignals): Promise<Privilege> =>
   Promise.resolve(mockUserPrivilege);

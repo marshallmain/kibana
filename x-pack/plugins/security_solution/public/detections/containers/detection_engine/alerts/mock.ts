@@ -983,6 +983,11 @@ export const mockSignalIndex: AlertsIndex = {
   template_outdated: false,
 };
 
+export const mockOutdatedSignalIndex: AlertsIndex = {
+  name: 'mock-signal-index',
+  template_outdated: true,
+};
+
 export const mockUserPrivilege: Privilege = {
   username: 'elastic',
   has_all_requested: false,
