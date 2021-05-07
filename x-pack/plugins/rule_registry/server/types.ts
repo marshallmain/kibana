@@ -4,7 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { Type, TypeOf } from '@kbn/config-schema';
+
 import { Logger } from 'kibana/server';
 import {
   ActionVariable,
@@ -17,10 +17,9 @@ import { ActionGroup, AlertExecutorOptions } from '../../alerting/server';
 import { RuleRegistry } from './rule_registry';
 import { ScopedRuleRegistryClient } from './rule_registry/create_scoped_rule_registry_client/types';
 import { BaseRuleFieldMap } from '../common';
+import { AlertTypeParamsValidator } from '../../alerting/server/types';
 
-export type RuleParams = Type<any>;
-
-type TypeOfRuleParams<TRuleParams extends RuleParams> = TypeOf<TRuleParams>;
+export type RuleParams = Record<string, unknown>;
 
 type RuleExecutorServices<
   TFieldMap extends BaseRuleFieldMap,
@@ -36,26 +35,24 @@ type RuleExecutorServices<
   scopedRuleRegistryClient?: ScopedRuleRegistryClient<TFieldMap>;
 };
 
-type PassthroughAlertExecutorOptions = Pick<
-  AlertExecutorOptions<
-    AlertTypeParams,
-    AlertTypeState,
-    AlertInstanceState,
-    AlertInstanceContext,
-    string
-  >,
-  'previousStartedAt' | 'startedAt' | 'state'
+type PassthroughAlertExecutorOptions = AlertExecutorOptions<
+  AlertTypeParams,
+  AlertTypeState,
+  AlertInstanceState,
+  AlertInstanceContext,
+  string
 >;
 
 type RuleExecutorFunction<
   TFieldMap extends BaseRuleFieldMap,
-  TRuleParams extends RuleParams,
+  TRuleParams extends Record<string, any>,
   TActionVariable extends ActionVariable,
-  TAdditionalRuleExecutorServices extends Record<string, any>
+  TAdditionalRuleExecutorServices extends Record<string, any>,
+  TExecutorReturnType extends Record<string, any> = {}
 > = (
   options: PassthroughAlertExecutorOptions & {
     services: RuleExecutorServices<TFieldMap, TActionVariable> & TAdditionalRuleExecutorServices;
-    params: TypeOfRuleParams<TRuleParams>;
+    params: TRuleParams;
     rule: {
       id: string;
       uuid: string;
@@ -64,7 +61,7 @@ type RuleExecutorFunction<
     };
     producer: string;
   }
-) => Promise<Record<string, any>>;
+) => Promise<TExecutorReturnType>;
 
 interface RuleTypeBase {
   id: string;
@@ -77,12 +74,13 @@ interface RuleTypeBase {
 
 export type RuleType<
   TFieldMap extends BaseRuleFieldMap,
-  TRuleParams extends RuleParams,
+  TRuleParams extends Record<string, unknown>,
   TActionVariable extends ActionVariable,
-  TAdditionalRuleExecutorServices extends Record<string, any> = {}
+  TAdditionalRuleExecutorServices extends Record<string, any> = {},
+  TExecutorReturnType extends Record<string, any> = {}
 > = RuleTypeBase & {
   validate: {
-    params: TRuleParams;
+    params: AlertTypeParamsValidator<TRuleParams>;
   };
   actionVariables: {
     context: TActionVariable[];
@@ -91,7 +89,8 @@ export type RuleType<
     TFieldMap,
     TRuleParams,
     TActionVariable,
-    TAdditionalRuleExecutorServices
+    TAdditionalRuleExecutorServices,
+    TExecutorReturnType
   >;
 };
 

@@ -85,6 +85,7 @@ import { PolicyWatcher } from './endpoint/lib/policy/license_watch';
 import { securitySolutionTimelineEqlSearchStrategyProvider } from './search_strategy/timeline/eql';
 import { parseExperimentalConfigValue } from '../common/experimental_features';
 import { migrateArtifactsToFleet } from './endpoint/lib/artifacts/migrate_artifacts_to_fleet';
+import { createSecurityRuleTypeFactory } from './lib/detection_engine/reference_rules/base';
 
 export type SecurityRuleRegistry = SetupPlugins['ruleRegistry'];
 
@@ -297,10 +298,10 @@ export class Plugin implements IPlugin<PluginSetup, PluginStart, SetupPlugins, S
           ...pickWithPatterns(ecsFieldMap, 'host.name', 'service.name'),
         },
       });
-
+      const ruleFactory = createSecurityRuleTypeFactory(this.setupPlugins.lists);
       // Register reference rule types via rule-registry
       this.setupPlugins.ruleRegistry.registerType(queryAlertType);
-      this.setupPlugins.ruleRegistry.registerType(eqlAlertType);
+      this.setupPlugins.ruleRegistry.registerType(ruleFactory(eqlAlertType));
       this.setupPlugins.ruleRegistry.registerType(thresholdAlertType);
     }
 

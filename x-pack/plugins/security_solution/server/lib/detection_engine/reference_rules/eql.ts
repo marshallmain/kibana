@@ -7,29 +7,46 @@
 
 import moment from 'moment';
 import v4 from 'uuid/v4';
+import * as t from 'io-ts';
 
 import { ApiResponse } from '@elastic/elasticsearch';
 import { schema } from '@kbn/config-schema';
 import { BaseRuleFieldMap, OutputOfFieldMap } from '../../../../../rule_registry/common';
 
 import { createPersistenceRuleTypeFactory } from '../../../../../rule_registry/server';
-import { EQL_ALERT_TYPE_ID } from '../../../../common/constants';
+import { DEFAULT_INDEX_PATTERN, EQL_ALERT_TYPE_ID } from '../../../../common/constants';
 import { buildEqlSearchRequest } from '../../../../common/detection_engine/get_query_filter';
 import { SecurityRuleRegistry } from '../../../plugin';
 import { BaseSignalHit, EqlSignalSearchResponse } from '../signals/types';
+import { validateNonExact } from '../../../../common/validate';
+import { EqlRuleParams, eqlRuleParams } from '../schemas/rule_schemas';
+import { ActionVariable } from 'x-pack/plugins/alerting/common';
+import { SecurityRuleType } from './base';
 
 const createSecurityEQLRuleType = createPersistenceRuleTypeFactory<SecurityRuleRegistry>();
 
 type AlertType = OutputOfFieldMap<BaseRuleFieldMap>;
 
-export const eqlAlertType = createSecurityEQLRuleType({
+export const validateIotsAsKbn = <T extends t.Mixed>(inputSchema: T) => {
+  return (object: unknown): t.TypeOf<typeof inputSchema> => {
+    const [validated, errors] = validateNonExact(object, inputSchema);
+    if (errors != null) {
+      throw new Error(errors);
+    }
+    if (validated == null) {
+      throw new Error('Validation of schema failed');
+    }
+    return validated;
+  };
+};
+
+export const eqlAlertType: SecurityRuleType<EqlRuleParams> = {
   id: EQL_ALERT_TYPE_ID,
   name: 'EQL Rule',
   validate: {
-    params: schema.object({
-      eqlQuery: schema.string(),
-      indexPatterns: schema.arrayOf(schema.string()),
-    }),
+    params: {
+      validate: validateIotsAsKbn(eqlRuleParams),
+    },
   },
   actionGroups: [
     {
@@ -47,21 +64,25 @@ export const eqlAlertType = createSecurityEQLRuleType({
     // previousStartedAt,
     rule,
     startedAt,
-    services: { alertWithPersistence, findAlerts, scopedClusterClient },
-    params: { indexPatterns, eqlQuery },
+    services: {
+      alertWithPersistence,
+      findAlerts,
+      scopedClusterClient,
+      savedObjectsClient,
+      exceptionItems,
+      listClient,
+    },
+    params,
   }) {
-    const from = moment(startedAt).subtract(moment.duration(5, 'm')).toISOString(); // hardcoded 5-minute rule interval
-    const to = startedAt.toISOString();
-
     const request = buildEqlSearchRequest(
-      eqlQuery,
-      indexPatterns,
-      from,
-      to,
-      10,
-      undefined,
-      [],
-      undefined
+      params.query,
+      params.index ?? DEFAULT_INDEX_PATTERN,
+      params.from,
+      params.to,
+      params.maxSignals, // No search after support for EQL yet, so TODO: paging
+      params.timestampOverride,
+      exceptionItems,
+      params.eventCategoryOverride
     );
     const { body: response } = (await scopedClusterClient.asCurrentUser.transport.request(
       request
@@ -115,4 +136,4 @@ export const eqlAlertType = createSecurityEQLRuleType({
       lastChecked: new Date(),
     };
   },
-});
+};

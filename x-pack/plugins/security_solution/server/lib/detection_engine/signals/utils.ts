@@ -18,7 +18,11 @@ import {
   TimestampOverrideOrUndefined,
   Privilege,
 } from '../../../../common/detection_engine/schemas/common/schemas';
-import { Logger, SavedObjectsClientContract } from '../../../../../../../src/core/server';
+import {
+  ElasticsearchClient,
+  Logger,
+  SavedObjectsClientContract,
+} from '../../../../../../../src/core/server';
 import {
   AlertInstanceContext,
   AlertInstanceState,
@@ -222,6 +226,35 @@ export const getListsClient = ({
     spaceId,
     updatedByUser ?? 'elastic'
   );
+  const exceptionsClient = lists.getExceptionListClient(
+    savedObjectClient,
+    updatedByUser ?? 'elastic'
+  );
+
+  return { listClient, exceptionsClient };
+};
+
+export const newGetListsClient = ({
+  lists,
+  spaceId,
+  updatedByUser,
+  esClient,
+  savedObjectClient,
+}: {
+  lists: ListPluginSetup | undefined;
+  spaceId: string;
+  updatedByUser: string | null;
+  esClient: ElasticsearchClient;
+  savedObjectClient: SavedObjectsClientContract;
+}): {
+  listClient: ListClient;
+  exceptionsClient: ExceptionListClient;
+} => {
+  if (lists == null) {
+    throw new Error('lists plugin unavailable during rule execution');
+  }
+
+  const listClient = lists.getListClient(esClient, spaceId, updatedByUser ?? 'elastic');
   const exceptionsClient = lists.getExceptionListClient(
     savedObjectClient,
     updatedByUser ?? 'elastic'

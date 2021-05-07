@@ -249,7 +249,7 @@ export class RuleRegistry<TFieldMap extends BaseRuleFieldMap> {
     this.types.push(type);
 
     this.options.alertingPluginSetupContract.registerType<
-      AlertTypeParams,
+      TRuleParams,
       AlertTypeState,
       AlertInstanceState,
       { [key in TActionVariable['name']]: any },

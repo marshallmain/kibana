@@ -24,8 +24,25 @@ type PersistenceAlertQueryService<TFieldMap extends BaseRuleFieldMap> = (
   query: ESSearchRequest
 ) => Promise<Array<OutputOfFieldMap<TFieldMap>>>;
 
+export type PersistenceRuleType<
+  TFieldMap extends BaseRuleFieldMap,
+  TRuleParams extends Record<string, unknown>,
+  TActionVariable extends ActionVariable,
+  TAdditionalRuleExecutorServices extends Record<string, any> = {},
+  TExecutorReturnType extends Record<string, any> = {}
+> = RuleType<
+  TFieldMap,
+  TRuleParams,
+  TActionVariable,
+  TAdditionalRuleExecutorServices & {
+    alertWithPersistence: PersistenceAlertPersistenceService<TFieldMap, TActionVariable>;
+    findAlerts: PersistenceAlertQueryService<TFieldMap>;
+  },
+  TExecutorReturnType
+>;
+
 type CreatePersistenceRuleType<TFieldMap extends BaseRuleFieldMap> = <
-  TRuleParams extends RuleParams,
+  TRuleParams extends Record<string, unknown>,
   TActionVariable extends ActionVariable
 >(
   type: RuleType<
