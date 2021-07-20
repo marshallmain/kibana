@@ -31,6 +31,7 @@ import {
   DEFAULT_RULE_REFRESH_IDLE_VALUE,
   DEFAULT_TRANSFORMS,
   DEFAULT_TRANSFORMS_SETTING,
+  USE_SPACE_ID_AS_NAMESPACE,
 } from '../common/constants';
 import { transformConfigSchema } from '../common/transforms/types';
 import { ExperimentalFeatures } from '../common/experimental_features';
@@ -187,6 +188,19 @@ export const initUiSettings = (
           url_template: schema.string(),
         })
       ),
+    },
+    [USE_SPACE_ID_AS_NAMESPACE]: {
+      name: i18n.translate('xpack.securitySolution.uiSettings.useSpaceIdAsNamespace', {
+        defaultMessage: 'Use Space As Rule Namespace',
+      }),
+      value: true,
+      description: i18n.translate('xpack.securitySolution.uiSettings.useSpaceIdAsNamespaceDescription', {
+        defaultMessage: '<p>Uses the current space name as the namespace for every Security Solution rule in this space</p>',
+      }),
+      type: 'boolean',
+      category: [APP_ID],
+      requiresPageReload: false,
+      schema: schema.boolean(),
     },
     // TODO: Remove this check once the experimental flag is removed
     ...(experimentalFeatures.metricsEntitiesEnabled
