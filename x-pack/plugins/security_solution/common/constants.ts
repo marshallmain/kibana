@@ -112,10 +112,12 @@ export const IP_REPUTATION_LINKS_SETTING_DEFAULT = `[
   { "name": "talosIntelligence.com", "url_template": "https://talosintelligence.com/reputation_center/lookup?search={{ip}}" }
 ]`;
 
-/** This Kibana Advanced Setting, when enabled, causes Security Solution rules to use the current space's 
+/** This Kibana Advanced Setting, when enabled, causes Security Solution rules to use the current space's
  * ID as the rule's `namespace`.
  */
 export const USE_SPACE_ID_AS_NAMESPACE = 'securitySolution:useSpaceIdAsNamespace';
+
+export const DEFAULT_SPACE_ID_AS_NAMESPACE = true;
 
 /** The default settings for the transforms */
 export const defaultTransformsSetting: TransformConfigSchema = {

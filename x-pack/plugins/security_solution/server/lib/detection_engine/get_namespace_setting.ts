@@ -5,7 +5,10 @@
  * 2.0.
  */
 
-import { USE_SPACE_ID_AS_NAMESPACE } from '../../../common/constants';
+import {
+  DEFAULT_SPACE_ID_AS_NAMESPACE,
+  USE_SPACE_ID_AS_NAMESPACE,
+} from '../../../common/constants';
 import {
   AlertInstanceContext,
   AlertInstanceState,
@@ -19,9 +22,12 @@ export const getNamespaceSetting = async (
   const configuration = await services.savedObjectsClient.get<{
     [USE_SPACE_ID_AS_NAMESPACE]: boolean;
   }>('config', version);
-  if (configuration.attributes != null && configuration.attributes[USE_SPACE_ID_AS_NAMESPACE] != null) {
+  if (
+    configuration.attributes != null &&
+    configuration.attributes[USE_SPACE_ID_AS_NAMESPACE] != null
+  ) {
     return configuration.attributes[USE_SPACE_ID_AS_NAMESPACE];
   } else {
-    throw Error(`Failed to fetch advanced setting ${USE_SPACE_ID_AS_NAMESPACE}`);
+    return DEFAULT_SPACE_ID_AS_NAMESPACE;
   }
 };

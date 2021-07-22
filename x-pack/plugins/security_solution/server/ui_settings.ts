@@ -32,6 +32,7 @@ import {
   DEFAULT_TRANSFORMS,
   DEFAULT_TRANSFORMS_SETTING,
   USE_SPACE_ID_AS_NAMESPACE,
+  DEFAULT_SPACE_ID_AS_NAMESPACE,
 } from '../common/constants';
 import { transformConfigSchema } from '../common/transforms/types';
 import { ExperimentalFeatures } from '../common/experimental_features';
@@ -193,10 +194,14 @@ export const initUiSettings = (
       name: i18n.translate('xpack.securitySolution.uiSettings.useSpaceIdAsNamespace', {
         defaultMessage: 'Use Space As Rule Namespace',
       }),
-      value: true,
-      description: i18n.translate('xpack.securitySolution.uiSettings.useSpaceIdAsNamespaceDescription', {
-        defaultMessage: '<p>Uses the current space name as the namespace for every Security Solution rule in this space</p>',
-      }),
+      value: DEFAULT_SPACE_ID_AS_NAMESPACE,
+      description: i18n.translate(
+        'xpack.securitySolution.uiSettings.useSpaceIdAsNamespaceDescription',
+        {
+          defaultMessage:
+            '<p>Uses the current space name as the namespace for every Security Solution rule in this space</p>',
+        }
+      ),
       type: 'boolean',
       category: [APP_ID],
       requiresPageReload: false,
