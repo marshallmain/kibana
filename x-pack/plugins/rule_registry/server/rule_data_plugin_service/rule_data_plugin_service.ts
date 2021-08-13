@@ -105,46 +105,38 @@ export class RuleDataPluginService {
       indexOptions,
     });
 
-    const waitUntilClusterClientAvailable = async (): Promise<WaitResult> => {
-      try {
-        const clusterClient = await this.options.getClusterClient();
-        return right(clusterClient);
-      } catch (e) {
+    const waitUntilClusterClientAvailable: Promise<WaitResult> = this.options
+      .getClusterClient()
+      .then((clusterClient) => right(clusterClient))
+      .catch((e) => {
         this.options.logger.error(e);
         return left(e);
-      }
-    };
-
-    const waitUntilIndexResourcesInstalled = async (): Promise<WaitResult> => {
-      try {
-        const result = await this.installCommonResources;
-        if (isLeft(result)) {
-          return result;
-        }
-
-        await this.resourceInstaller.installIndexLevelResources(indexInfo);
-
-        const clusterClient = await this.options.getClusterClient();
-        return right(clusterClient);
-      } catch (e) {
-        this.options.logger.error(e);
-        return left(e);
-      }
-    };
+      });
 
     // Start initialization now, including installation of index resources.
     // Let's unblock read operations since installation can take quite some time.
     // Write operations will have to wait, of course.
-    // NOTE: these promises cannot reject, otherwise it will lead to an
-    // unhandled promise rejection shutting down Kibana process.
-    const waitUntilReadyForReading = waitUntilClusterClientAvailable();
-    const waitUntilReadyForWriting = waitUntilIndexResourcesInstalled();
+    const waitUntilReadyForWriting: Promise<WaitResult> = this.installCommonResources.then(
+      (result) => {
+        if (isLeft(result)) {
+          return result;
+        }
+
+        return this.resourceInstaller.installIndexLevelResources(indexInfo).then(
+          () => waitUntilClusterClientAvailable,
+          (e) => {
+            this.options.logger.error(e);
+            return left(e);
+          }
+        );
+      }
+    );
 
     return new RuleDataClient({
       indexInfo,
       resourceInstaller: this.resourceInstaller,
       isWriteEnabled: this.isWriteEnabled(),
-      waitUntilReadyForReading,
+      waitUntilReadyForReading: waitUntilClusterClientAvailable,
       waitUntilReadyForWriting,
     });
   }
