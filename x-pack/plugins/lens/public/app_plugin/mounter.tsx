@@ -6,18 +6,14 @@
  */
 
 import React, { FC, useCallback } from 'react';
-
-import { AppMountParameters, CoreSetup } from 'kibana/public';
+import { DeepPartial } from '@reduxjs/toolkit';
+import { AppMountParameters, CoreSetup, CoreStart } from 'kibana/public';
 import { FormattedMessage, I18nProvider } from '@kbn/i18n/react';
 import { HashRouter, Route, RouteComponentProps, Switch } from 'react-router-dom';
 import { History } from 'history';
 import { render, unmountComponentAtNode } from 'react-dom';
 import { i18n } from '@kbn/i18n';
-
-import { DashboardFeatureFlagConfig } from 'src/plugins/dashboard/public';
 import { Provider } from 'react-redux';
-import { uniq, isEqual } from 'lodash';
-import { EmbeddableEditorState } from 'src/plugins/embeddable/public';
 import { Storage } from '../../../../../src/plugins/kibana_utils/public';
 
 import { LensReportManager, setReportManager, trackUiEvent } from '../lens_ui_telemetry';
@@ -26,59 +22,50 @@ import { App } from './app';
 import { EditorFrameStart } from '../types';
 import { addHelpMenuToAppChrome } from '../help_menu_util';
 import { LensPluginStartDependencies } from '../plugin';
-import { LENS_EMBEDDABLE_TYPE, LENS_EDIT_BY_VALUE, APP_ID, getFullPath } from '../../common';
+import { LENS_EMBEDDABLE_TYPE, LENS_EDIT_BY_VALUE, APP_ID } from '../../common';
 import {
   LensEmbeddableInput,
   LensByReferenceInput,
   LensByValueInput,
-} from '../editor_frame_service/embeddable/embeddable';
+} from '../embeddable/embeddable';
 import { ACTION_VISUALIZE_LENS_FIELD } from '../../../../../src/plugins/ui_actions/public';
 import { LensAttributeService } from '../lens_attribute_service';
 import { LensAppServices, RedirectToOriginProps, HistoryLocationState } from './types';
 import { KibanaContextProvider } from '../../../../../src/plugins/kibana_react/public';
-
 import {
   makeConfigureStore,
   navigateAway,
-  getPreloadedState,
   LensRootStore,
-  setState,
+  loadInitial,
+  LensState,
 } from '../state_management';
-import { getAllIndexPatterns, getResolvedDateRange } from '../utils';
-import { injectFilterReferences } from '../persistence';
+import { getPreloadedState } from '../state_management/lens_slice';
 
-export async function mountApp(
-  core: CoreSetup<LensPluginStartDependencies, void>,
-  params: AppMountParameters,
-  mountProps: {
-    createEditorFrame: EditorFrameStart['createInstance'];
-    getByValueFeatureFlag: () => Promise<DashboardFeatureFlagConfig>;
-    attributeService: () => Promise<LensAttributeService>;
-    getPresentationUtilContext: () => Promise<FC>;
-  }
-) {
+export async function getLensServices(
+  coreStart: CoreStart,
+  startDependencies: LensPluginStartDependencies,
+  attributeService: () => Promise<LensAttributeService>
+): Promise<LensAppServices> {
   const {
-    createEditorFrame,
-    getByValueFeatureFlag,
-    attributeService,
-    getPresentationUtilContext,
-  } = mountProps;
-  const [coreStart, startDependencies] = await core.getStartServices();
-  const { data, navigation, embeddable, savedObjectsTagging } = startDependencies;
+    data,
+    navigation,
+    embeddable,
+    savedObjectsTagging,
+    usageCollection,
+    fieldFormats,
+  } = startDependencies;
 
-  const instance = await createEditorFrame();
   const storage = new Storage(localStorage);
   const stateTransfer = embeddable?.getStateTransfer();
-  const historyLocationState = params.history.location.state as HistoryLocationState;
   const embeddableEditorIncomingState = stateTransfer?.getIncomingEditorState(APP_ID);
 
-  const dashboardFeatureFlag = await getByValueFeatureFlag();
-
-  const lensServices: LensAppServices = {
+  return {
     data,
     storage,
     navigation,
+    fieldFormats,
     stateTransfer,
+    usageCollection,
     savedObjectsTagging,
     attributeService: await attributeService(),
     http: coreStart.http,
@@ -88,6 +75,8 @@ export async function mountApp(
     application: coreStart.application,
     notifications: coreStart.notifications,
     savedObjectsClient: coreStart.savedObjects.client,
+    presentationUtil: startDependencies.presentationUtil,
+    dashboard: startDependencies.dashboard,
     getOriginatingAppName: () => {
       return embeddableEditorIncomingState?.originatingApp
         ? stateTransfer?.getAppNameFromId(embeddableEditorIncomingState.originatingApp)
@@ -95,8 +84,29 @@ export async function mountApp(
     },
 
     // Temporarily required until the 'by value' paradigm is default.
-    dashboardFeatureFlag,
+    dashboardFeatureFlag: startDependencies.dashboard.dashboardFeatureFlagConfig,
   };
+}
+
+export async function mountApp(
+  core: CoreSetup<LensPluginStartDependencies, void>,
+  params: AppMountParameters,
+  mountProps: {
+    createEditorFrame: EditorFrameStart['createInstance'];
+    attributeService: () => Promise<LensAttributeService>;
+    getPresentationUtilContext: () => Promise<FC>;
+  }
+) {
+  const { createEditorFrame, attributeService, getPresentationUtilContext } = mountProps;
+  const [coreStart, startDependencies] = await core.getStartServices();
+  const instance = await createEditorFrame();
+  const historyLocationState = params.history.location.state as HistoryLocationState;
+
+  const lensServices = await getLensServices(coreStart, startDependencies, attributeService);
+
+  const { stateTransfer, data, storage } = lensServices;
+
+  const embeddableEditorIncomingState = stateTransfer?.getIncomingEditorState(APP_ID);
 
   addHelpMenuToAppChrome(coreStart.chrome, coreStart.docLinks);
   coreStart.chrome.docTitle.change(
@@ -130,23 +140,6 @@ export async function mountApp(
     }
   };
 
-  const redirectToDashboard = (embeddableInput: LensEmbeddableInput, dashboardId: string) => {
-    if (!lensServices.dashboardFeatureFlag.allowByValueEmbeddables) {
-      throw new Error('redirectToDashboard called with by-value embeddables disabled');
-    }
-
-    const state = {
-      input: embeddableInput,
-      type: LENS_EMBEDDABLE_TYPE,
-    };
-
-    const path = dashboardId === 'new' ? '#/create' : `#/view/${dashboardId}`;
-    stateTransfer.navigateToWithEmbeddablePackage('dashboards', {
-      state,
-      path,
-    });
-  };
-
   const redirectToOrigin = (props?: RedirectToOriginProps) => {
     if (!embeddableEditorIncomingState?.originatingApp) {
       throw new Error('redirectToOrigin called without an originating app');
@@ -154,14 +147,18 @@ export async function mountApp(
     if (stateTransfer && props?.input) {
       const { input, isCopied } = props;
       stateTransfer.navigateToWithEmbeddablePackage(embeddableEditorIncomingState?.originatingApp, {
+        path: embeddableEditorIncomingState?.originatingPath,
         state: {
           embeddableId: isCopied ? undefined : embeddableEditorIncomingState.embeddableId,
           type: LENS_EMBEDDABLE_TYPE,
           input,
+          searchSessionId: data.search.session.getSessionId(),
         },
       });
     } else {
-      coreStart.application.navigateToApp(embeddableEditorIncomingState?.originatingApp);
+      coreStart.application.navigateToApp(embeddableEditorIncomingState?.originatingApp, {
+        path: embeddableEditorIncomingState?.originatingPath,
+      });
     }
   };
   const initialContext =
@@ -175,19 +172,22 @@ export async function mountApp(
   if (!initialContext) {
     data.query.filterManager.setAppFilters([]);
   }
-  const preloadedState = getPreloadedState({
-    query: data.query.queryString.getQuery(),
-    // Do not use app-specific filters from previous app,
-    // only if Lens was opened with the intention to visualize a field (e.g. coming from Discover)
-    filters: !initialContext
-      ? data.query.filterManager.getGlobalFilters()
-      : data.query.filterManager.getFilters(),
-    searchSessionId: data.search.session.getSessionId(),
-    resolvedDateRange: getResolvedDateRange(data.query.timefilter.timefilter),
-    isLinkedToOriginatingApp: Boolean(embeddableEditorIncomingState?.originatingApp),
-  });
 
-  const lensStore: LensRootStore = makeConfigureStore(preloadedState, { data });
+  if (embeddableEditorIncomingState?.searchSessionId) {
+    data.search.session.continue(embeddableEditorIncomingState.searchSessionId);
+  }
+
+  const { datasourceMap, visualizationMap } = instance;
+  const storeDeps = {
+    lensServices,
+    datasourceMap,
+    visualizationMap,
+    embeddableEditorIncomingState,
+    initialContext,
+  };
+  const lensStore: LensRootStore = makeConfigureStore(storeDeps, {
+    lens: getPreloadedState(storeDeps),
+  } as DeepPartial<LensState>);
 
   const EditorRenderer = React.memo(
     (props: { id?: string; history: History<unknown>; editByValue?: boolean }) => {
@@ -199,14 +199,8 @@ export async function mountApp(
       );
       trackUiEvent('loaded');
       const initialInput = getInitialInput(props.id, props.editByValue);
-      loadDocument(
-        redirectCallback,
-        initialInput,
-        lensServices,
-        lensStore,
-        embeddableEditorIncomingState,
-        dashboardFeatureFlag
-      );
+      lensStore.dispatch(loadInitial({ redirectCallback, initialInput }));
+
       return (
         <Provider store={lensStore}>
           <App
@@ -215,11 +209,11 @@ export async function mountApp(
             initialInput={initialInput}
             redirectTo={redirectCallback}
             redirectToOrigin={redirectToOrigin}
-            redirectToDashboard={redirectToDashboard}
             onAppLeave={params.onAppLeave}
             setHeaderActionMenu={params.setHeaderActionMenu}
             history={props.history}
-            initialContext={initialContext}
+            datasourceMap={datasourceMap}
+            visualizationMap={visualizationMap}
           />
         </Provider>
       );
@@ -274,98 +268,9 @@ export async function mountApp(
     params.element
   );
   return () => {
+    data.search.session.clear();
     unmountComponentAtNode(params.element);
     unlistenParentHistory();
     lensStore.dispatch(navigateAway());
   };
-}
-
-export function loadDocument(
-  redirectCallback: (savedObjectId?: string) => void,
-  initialInput: LensEmbeddableInput | undefined,
-  lensServices: LensAppServices,
-  lensStore: LensRootStore,
-  embeddableEditorIncomingState: EmbeddableEditorState | undefined,
-  dashboardFeatureFlag: DashboardFeatureFlagConfig
-) {
-  const { attributeService, chrome, notifications, data } = lensServices;
-  const { persistedDoc } = lensStore.getState().app;
-  if (
-    !initialInput ||
-    (attributeService.inputIsRefType(initialInput) &&
-      initialInput.savedObjectId === persistedDoc?.savedObjectId)
-  ) {
-    return;
-  }
-  lensStore.dispatch(setState({ isAppLoading: true }));
-
-  attributeService
-    .unwrapAttributes(initialInput)
-    .then((attributes) => {
-      if (!initialInput) {
-        return;
-      }
-      const doc = {
-        ...initialInput,
-        ...attributes,
-        type: LENS_EMBEDDABLE_TYPE,
-      };
-
-      if (attributeService.inputIsRefType(initialInput)) {
-        chrome.recentlyAccessed.add(
-          getFullPath(initialInput.savedObjectId),
-          attributes.title,
-          initialInput.savedObjectId
-        );
-      }
-      const indexPatternIds = uniq(
-        doc.references.filter(({ type }) => type === 'index-pattern').map(({ id }) => id)
-      );
-      getAllIndexPatterns(indexPatternIds, data.indexPatterns)
-        .then(({ indexPatterns }) => {
-          // Don't overwrite any pinned filters
-          data.query.filterManager.setAppFilters(
-            injectFilterReferences(doc.state.filters, doc.references)
-          );
-          const currentSessionId = data.search.session.getSessionId();
-          lensStore.dispatch(
-            setState({
-              query: doc.state.query,
-              isAppLoading: false,
-              indexPatternsForTopNav: indexPatterns,
-              lastKnownDoc: doc,
-              searchSessionId:
-                dashboardFeatureFlag.allowByValueEmbeddables &&
-                Boolean(embeddableEditorIncomingState?.originatingApp) &&
-                !(initialInput as LensByReferenceInput)?.savedObjectId &&
-                currentSessionId
-                  ? currentSessionId
-                  : data.search.session.start(),
-              ...(!isEqual(persistedDoc, doc) ? { persistedDoc: doc } : null),
-            })
-          );
-        })
-        .catch((e) => {
-          lensStore.dispatch(
-            setState({
-              isAppLoading: false,
-            })
-          );
-          redirectCallback();
-        });
-    })
-    .catch((e) => {
-      lensStore.dispatch(
-        setState({
-          isAppLoading: false,
-        })
-      );
-      notifications.toasts.addDanger(
-        i18n.translate('xpack.lens.app.docLoadingError', {
-          defaultMessage: 'Error loading saved document',
-        })
-      );
-
-      redirectCallback();
-    });
 }

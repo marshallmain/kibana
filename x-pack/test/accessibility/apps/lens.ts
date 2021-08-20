@@ -17,8 +17,8 @@ export default function ({ getService, getPageObjects }: FtrProviderContext) {
   describe('Lens', () => {
     const lensChartName = 'MyLensChart';
     before(async () => {
-      await esArchiver.loadIfNeeded('logstash_functional');
-      await esArchiver.loadIfNeeded('lens/basic');
+      await esArchiver.loadIfNeeded('x-pack/test/functional/es_archives/logstash_functional');
+      await esArchiver.loadIfNeeded('x-pack/test/functional/es_archives/lens/basic');
     });
 
     after(async () => {
@@ -27,8 +27,8 @@ export default function ({ getService, getPageObjects }: FtrProviderContext) {
       await listingTable.checkListingSelectAllCheckbox();
       await listingTable.clickDeleteSelected();
       await PageObjects.common.clickConfirmOnModal();
-      await esArchiver.unload('logstash_functional');
-      await esArchiver.unload('lens/basic');
+      await esArchiver.unload('x-pack/test/functional/es_archives/logstash_functional');
+      await esArchiver.unload('x-pack/test/functional/es_archives/lens/basic');
     });
 
     it('lens', async () => {
@@ -81,7 +81,7 @@ export default function ({ getService, getPageObjects }: FtrProviderContext) {
     });
 
     it('lens datatable with palette panel open', async () => {
-      await PageObjects.lens.openTablePalettePanel();
+      await PageObjects.lens.openPalettePanel('lnsDatatable');
       await a11y.testAppSnapshot();
     });
 
@@ -142,8 +142,8 @@ export default function ({ getService, getPageObjects }: FtrProviderContext) {
       await PageObjects.lens.configureDimension(
         {
           dimension: 'lnsXY_xDimensionPanel > lns-empty-dimension',
-          operation: 'terms',
-          field: 'ip',
+          operation: 'date_histogram',
+          field: '@timestamp',
         },
         1
       );

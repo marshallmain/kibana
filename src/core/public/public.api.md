@@ -53,24 +53,21 @@ import { UserProvidedValues as UserProvidedValues_2 } from 'src/core/server/type
 export function __kbnBootstrap__(): Promise<void>;
 
 // @public (undocumented)
-export interface App<HistoryLocationState = unknown> {
+export interface App<HistoryLocationState = unknown> extends AppNavOptions {
     appRoute?: string;
     capabilities?: Partial<Capabilities>;
     category?: AppCategory;
     chromeless?: boolean;
     deepLinks?: AppDeepLink[];
     defaultPath?: string;
-    euiIconType?: string;
     exactRoute?: boolean;
-    icon?: string;
     id: string;
     keywords?: string[];
     mount: AppMount<HistoryLocationState>;
     navLinkStatus?: AppNavLinkStatus;
-    order?: number;
+    searchable?: boolean;
     status?: AppStatus;
     title: string;
-    tooltip?: string;
     updater$?: Observable<AppUpdater>;
 }
 
@@ -92,7 +89,8 @@ export type AppDeepLink = {
     title: string;
     keywords?: string[];
     navLinkStatus?: AppNavLinkStatus;
-} & ({
+    searchable?: boolean;
+} & AppNavOptions & ({
     path: string;
     deepLinks?: AppDeepLink[];
 } | {
@@ -152,6 +150,7 @@ export interface ApplicationStart {
     getUrlForApp(appId: string, options?: {
         path?: string;
         absolute?: boolean;
+        deepLinkId?: string;
     }): string;
     navigateToApp(appId: string, options?: NavigateToAppOptions): Promise<void>;
     navigateToUrl(url: string): Promise<void>;
@@ -180,6 +179,14 @@ export enum AppNavLinkStatus {
 }
 
 // @public
+export interface AppNavOptions {
+    euiIconType?: string;
+    icon?: string;
+    order?: number;
+    tooltip?: string;
+}
+
+// @public
 export enum AppStatus {
     accessible = 0,
     inaccessible = 1
@@ -189,7 +196,7 @@ export enum AppStatus {
 export type AppUnmount = () => void;
 
 // @public
-export type AppUpdatableFields = Pick<App, 'status' | 'navLinkStatus' | 'tooltip' | 'defaultPath' | 'deepLinks'>;
+export type AppUpdatableFields = Pick<App, 'status' | 'navLinkStatus' | 'searchable' | 'tooltip' | 'defaultPath' | 'deepLinks'>;
 
 // @public
 export type AppUpdater = (app: App) => Partial<AppUpdatableFields> | undefined;
@@ -222,14 +229,6 @@ export interface ChromeBadge {
     text: string;
     // (undocumented)
     tooltip: string;
-}
-
-// @public (undocumented)
-export interface ChromeBrand {
-    // (undocumented)
-    logo?: string;
-    // (undocumented)
-    smallLogo?: string;
 }
 
 // @public (undocumented)
@@ -314,8 +313,7 @@ export interface ChromeNavLink {
     readonly order?: number;
     readonly title: string;
     readonly tooltip?: string;
-    // Warning: (ae-unresolved-link) The @link reference could not be resolved: The package "kibana" does not have an export "AppBase"
-    readonly url?: string;
+    readonly url: string;
 }
 
 // @public
@@ -326,7 +324,6 @@ export interface ChromeNavLinks {
     getForceAppSwitcherNavigation$(): Observable<boolean>;
     getNavLinks$(): Observable<Array<Readonly<ChromeNavLink>>>;
     has(id: string): boolean;
-    showOnly(id: string): void;
 }
 
 // @public
@@ -349,11 +346,8 @@ export interface ChromeRecentlyAccessedHistoryItem {
 
 // @public
 export interface ChromeStart {
-    addApplicationClass(className: string): void;
     docTitle: ChromeDocTitle;
-    getApplicationClasses$(): Observable<string[]>;
     getBadge$(): Observable<ChromeBadge | undefined>;
-    getBrand$(): Observable<ChromeBrand>;
     getBreadcrumbs$(): Observable<ChromeBreadcrumb[]>;
     // Warning: (ae-forgotten-export) The symbol "ChromeBreadcrumbsAppendExtension" needs to be exported by the entry point index.d.ts
     getBreadcrumbsAppendExtension$(): Observable<ChromeBreadcrumbsAppendExtension | undefined>;
@@ -364,10 +358,7 @@ export interface ChromeStart {
     navControls: ChromeNavControls;
     navLinks: ChromeNavLinks;
     recentlyAccessed: ChromeRecentlyAccessed;
-    removeApplicationClass(className: string): void;
-    setAppTitle(appTitle: string): void;
     setBadge(badge?: ChromeBadge): void;
-    setBrand(brand: ChromeBrand): void;
     setBreadcrumbs(newBreadcrumbs: ChromeBreadcrumb[]): void;
     setBreadcrumbsAppendExtension(breadcrumbsAppendExtension?: ChromeBreadcrumbsAppendExtension): void;
     setCustomNavLink(newCustomNavLink?: Partial<ChromeNavLink>): void;
@@ -481,6 +472,7 @@ export interface DocLinksStart {
     readonly ELASTIC_WEBSITE_URL: string;
     // (undocumented)
     readonly links: {
+        readonly settings: string;
         readonly canvas: {
             readonly guide: string;
         };
@@ -500,9 +492,13 @@ export interface DocLinksStart {
             readonly elasticsearchModule: string;
             readonly startup: string;
             readonly exportedFields: string;
+            readonly suricataModule: string;
+            readonly zeekModule: string;
         };
         readonly auditbeat: {
             readonly base: string;
+            readonly auditdModule: string;
+            readonly systemModule: string;
         };
         readonly metricbeat: {
             readonly base: string;
@@ -518,6 +514,9 @@ export interface DocLinksStart {
         };
         readonly heartbeat: {
             readonly base: string;
+        };
+        readonly libbeat: {
+            readonly getStarted: string;
         };
         readonly logstash: {
             readonly base: string;
@@ -579,6 +578,7 @@ export interface DocLinksStart {
         };
         readonly search: {
             readonly sessions: string;
+            readonly sessionLimits: string;
         };
         readonly indexPatterns: {
             readonly introduction: string;
@@ -589,10 +589,15 @@ export interface DocLinksStart {
         readonly addData: string;
         readonly kibana: string;
         readonly upgradeAssistant: string;
+        readonly rollupJobs: string;
         readonly elasticsearch: Record<string, string>;
         readonly siem: {
             readonly guide: string;
             readonly gettingStarted: string;
+            readonly ml: string;
+            readonly ruleChangeLog: string;
+            readonly detectionsReq: string;
+            readonly networkMap: string;
         };
         readonly query: {
             readonly eql: string;
@@ -600,6 +605,7 @@ export interface DocLinksStart {
             readonly luceneQuerySyntax: string;
             readonly percolate: string;
             readonly queryDsl: string;
+            readonly autocompleteChanges: string;
         };
         readonly date: {
             readonly dateMath: string;
@@ -658,6 +664,22 @@ export interface DocLinksStart {
         readonly plugins: Record<string, string>;
         readonly snapshotRestore: Record<string, string>;
         readonly ingest: Record<string, string>;
+        readonly fleet: Readonly<{
+            guide: string;
+            fleetServer: string;
+            fleetServerAddFleetServer: string;
+            settings: string;
+            settingsFleetServerHostSettings: string;
+            troubleshooting: string;
+            elasticAgent: string;
+            datastreams: string;
+            datastreamsNamingScheme: string;
+            upgradeElasticAgent: string;
+            upgradeElasticAgent712lower: string;
+        }>;
+        readonly ecs: {
+            readonly guide: string;
+        };
     };
 }
 
@@ -716,6 +738,8 @@ export class HttpFetchError extends Error implements IHttpFetchError {
 export interface HttpFetchOptions extends HttpRequestInit {
     asResponse?: boolean;
     asSystemRequest?: boolean;
+    // (undocumented)
+    context?: KibanaExecutionContext;
     headers?: HttpHeadersInit;
     prependBasePath?: boolean;
     query?: HttpFetchQuery;
@@ -914,12 +938,21 @@ export interface IUiSettingsClient {
 }
 
 // @public
+export type KibanaExecutionContext = {
+    readonly type: string;
+    readonly name: string;
+    readonly id: string;
+    readonly description: string;
+    readonly url?: string;
+    parent?: KibanaExecutionContext;
+};
+
+// @public
 export type MountPoint<T extends HTMLElement = HTMLElement> = (element: T) => UnmountCallback;
 
-// Warning: (ae-missing-release-tag) "NavigateToAppOptions" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
 // @public
 export interface NavigateToAppOptions {
+    deepLinkId?: string;
     openInNewTab?: boolean;
     path?: string;
     replace?: boolean;
@@ -959,13 +992,18 @@ export interface OverlayBannersStart {
 // @public (undocumented)
 export interface OverlayFlyoutOpenOptions {
     // (undocumented)
+    'aria-label'?: string;
+    // (undocumented)
     'data-test-subj'?: string;
     // (undocumented)
     className?: string;
     // (undocumented)
     closeButtonAriaLabel?: string;
     // (undocumented)
+    hideCloseButton?: boolean;
+    // (undocumented)
     maxWidth?: boolean | number | string;
+    onClose?: (flyout: OverlayRef) => void;
     // (undocumented)
     ownFocus?: boolean;
     // (undocumented)
@@ -1067,19 +1105,21 @@ export interface PluginInitializerContext<ConfigSchema extends object = object> 
 export type PluginOpaqueId = symbol;
 
 // @public
-export type PublicAppDeepLinkInfo = Omit<AppDeepLink, 'deepLinks' | 'keywords' | 'navLinkStatus'> & {
+export type PublicAppDeepLinkInfo = Omit<AppDeepLink, 'deepLinks' | 'keywords' | 'navLinkStatus' | 'searchable'> & {
     deepLinks: PublicAppDeepLinkInfo[];
     keywords: string[];
     navLinkStatus: AppNavLinkStatus;
+    searchable: boolean;
 };
 
 // @public
-export type PublicAppInfo = Omit<App, 'mount' | 'updater$' | 'keywords' | 'deepLinks'> & {
+export type PublicAppInfo = Omit<App, 'mount' | 'updater$' | 'keywords' | 'deepLinks' | 'searchable'> & {
     status: AppStatus;
     navLinkStatus: AppNavLinkStatus;
     appRoute: string;
     keywords: string[];
     deepLinks: PublicAppDeepLinkInfo[];
+    searchable: boolean;
 };
 
 // @public
@@ -1094,6 +1134,13 @@ export type ResolveDeprecationResponse = {
     status: 'fail';
     reason: string;
 };
+
+// @public
+export interface ResolvedSimpleSavedObject<T = unknown> {
+    alias_target_id?: SavedObjectsResolveResponse['alias_target_id'];
+    outcome: SavedObjectsResolveResponse['outcome'];
+    saved_object: SimpleSavedObject<T>;
+}
 
 // Warning: (ae-missing-release-tag) "SavedObject" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1224,6 +1271,7 @@ export class SavedObjectsClient {
     // Warning: (ae-forgotten-export) The symbol "SavedObjectsFindOptions" needs to be exported by the entry point index.d.ts
     find: <T = unknown, A = unknown>(options: SavedObjectsFindOptions_2) => Promise<SavedObjectsFindResponsePublic<T, unknown>>;
     get: <T = unknown>(type: string, id: string) => Promise<SimpleSavedObject<T>>;
+    resolve: <T = unknown>(type: string, id: string) => Promise<ResolvedSimpleSavedObject<T>>;
     update<T = unknown>(type: string, id: string, attributes: T, { version, references, upsert }?: SavedObjectsUpdateOptions): Promise<SimpleSavedObject<T>>;
 }
 
@@ -1249,7 +1297,7 @@ export interface SavedObjectsCreateOptions {
 // @public (undocumented)
 export interface SavedObjectsFindOptions {
     // @alpha
-    aggs?: Record<string, estypes.AggregationContainer>;
+    aggs?: Record<string, estypes.AggregationsAggregationContainer>;
     defaultSearchOperator?: 'AND' | 'OR';
     fields?: string[];
     // Warning: (ae-forgotten-export) The symbol "KueryNode" needs to be exported by the entry point index.d.ts
@@ -1275,7 +1323,7 @@ export interface SavedObjectsFindOptions {
     // (undocumented)
     sortField?: string;
     // (undocumented)
-    sortOrder?: estypes.SortOrder;
+    sortOrder?: estypes.SearchSortOrder;
     // (undocumented)
     type: string | string[];
     typeToNamespacesMap?: Map<string, string[] | undefined>;
@@ -1445,6 +1493,13 @@ export interface SavedObjectsMigrationVersion {
 export type SavedObjectsNamespaceType = 'single' | 'multiple' | 'multiple-isolated' | 'agnostic';
 
 // @public (undocumented)
+export interface SavedObjectsResolveResponse<T = unknown> {
+    alias_target_id?: string;
+    outcome: 'exactMatch' | 'aliasMatch' | 'conflict';
+    saved_object: SavedObject<T>;
+}
+
+// @public (undocumented)
 export interface SavedObjectsStart {
     // (undocumented)
     client: SavedObjectsClientContract;
@@ -1481,7 +1536,7 @@ export class ScopedHistory<HistoryLocationState = unknown> implements History<Hi
 
 // @public
 export class SimpleSavedObject<T = unknown> {
-    constructor(client: SavedObjectsClientContract, { id, type, version, attributes, error, references, migrationVersion, coreMigrationVersion, }: SavedObject<T>);
+    constructor(client: SavedObjectsClientContract, { id, type, version, attributes, error, references, migrationVersion, coreMigrationVersion, namespaces, }: SavedObject<T>);
     // (undocumented)
     attributes: T;
     // (undocumented)
@@ -1498,6 +1553,7 @@ export class SimpleSavedObject<T = unknown> {
     id: SavedObject<T>['id'];
     // (undocumented)
     migrationVersion: SavedObject<T>['migrationVersion'];
+    namespaces: SavedObject<T>['namespaces'];
     // (undocumented)
     references: SavedObject<T>['references'];
     // (undocumented)
@@ -1610,6 +1666,6 @@ export interface UserProvidedValues<T = any> {
 
 // Warnings were encountered during analysis:
 //
-// src/core/public/core_system.ts:166:21 - (ae-forgotten-export) The symbol "InternalApplicationStart" needs to be exported by the entry point index.d.ts
+// src/core/public/core_system.ts:168:21 - (ae-forgotten-export) The symbol "InternalApplicationStart" needs to be exported by the entry point index.d.ts
 
 ```

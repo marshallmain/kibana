@@ -5,24 +5,40 @@
  * 2.0.
  */
 
-import { Filter, IndexPattern, Query, SavedQuery } from '../../../../../src/plugins/data/public';
+import { VisualizeFieldContext } from 'src/plugins/ui_actions/public';
+import { EmbeddableEditorState } from 'src/plugins/embeddable/public';
+import { Filter, Query, SavedQuery } from '../../../../../src/plugins/data/public';
 import { Document } from '../persistence';
 
 import { TableInspectorAdapter } from '../editor_frame_service/types';
 import { DateRange } from '../../common';
+import { LensAppServices } from '../app_plugin/types';
+import { DatasourceMap, VisualizationMap } from '../types';
 
-export interface LensAppState {
+export interface VisualizationState {
+  activeId: string | null;
+  state: unknown;
+}
+
+export type DatasourceStates = Record<string, { state: unknown; isLoading: boolean }>;
+export interface PreviewState {
+  visualization: VisualizationState;
+  datasourceStates: DatasourceStates;
+}
+export interface EditorFrameState extends PreviewState {
+  activeDatasourceId: string | null;
+  stagedPreview?: PreviewState;
+  isFullscreenDatasource?: boolean;
+}
+export interface LensAppState extends EditorFrameState {
   persistedDoc?: Document;
-  lastKnownDoc?: Document;
 
-  // index patterns used to determine which filters are available in the top nav.
-  indexPatternsForTopNav: IndexPattern[];
   // Determines whether the lens editor shows the 'save and return' button, and the originating app breadcrumb.
   isLinkedToOriginatingApp?: boolean;
   isSaveable: boolean;
   activeData?: TableInspectorAdapter;
 
-  isAppLoading: boolean;
+  isLoading: boolean;
   query: Query;
   filters: Filter[];
   savedQuery?: SavedQuery;
@@ -38,5 +54,13 @@ export type DispatchSetState = (
 };
 
 export interface LensState {
-  app: LensAppState;
+  lens: LensAppState;
+}
+
+export interface LensStoreDeps {
+  lensServices: LensAppServices;
+  datasourceMap: DatasourceMap;
+  visualizationMap: VisualizationMap;
+  initialContext?: VisualizeFieldContext;
+  embeddableEditorIncomingState?: EmbeddableEditorState;
 }

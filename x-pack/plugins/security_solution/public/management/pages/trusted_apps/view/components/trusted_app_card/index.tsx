@@ -6,6 +6,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from 'react';
+import { isEmpty } from 'lodash/fp';
 import { EuiTableFieldDataColumnType } from '@elastic/eui';
 
 import {
@@ -133,35 +134,37 @@ export const TrustedAppCard = memo<TrustedAppCardProps>(
         <ItemDetailsPropertySummary
           name={PROPERTY_TITLES.updated_by}
           value={
-            <FormattedDate
+            <TextFieldValue
               fieldName={PROPERTY_TITLES.updated_by}
               value={trustedApp.updated_by}
               className="eui-textTruncate"
             />
           }
         />
-        <ItemDetailsPropertySummary
-          name={PROPERTY_TITLES.description}
-          value={
-            <TextFieldValue
-              fieldName={PROPERTY_TITLES.description || ''}
-              value={trustedApp.description || ''}
-              maxLength={100}
-            />
-          }
-        />
+        {!isEmpty(trustedApp.description) && (
+          <ItemDetailsPropertySummary
+            name={PROPERTY_TITLES.description}
+            value={
+              <TextFieldValue
+                fieldName={PROPERTY_TITLES.description || ''}
+                value={trustedApp.description || ''}
+                maxLength={100}
+              />
+            }
+          />
+        )}
 
         <ConditionsTable
           columns={useMemo(() => getEntriesColumnDefinitions(), [])}
           items={useMemo(() => [...trustedApp.entries], [trustedApp.entries])}
           badge="and"
+          className="trustedAppsConditionsTable"
           responsive
         />
 
         <ItemDetailsAction
           size="s"
           color="primary"
-          fill
           onClick={handleEdit}
           data-test-subj="trustedAppEditButton"
         >

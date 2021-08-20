@@ -8,9 +8,9 @@
 import { Logger } from 'kibana/server';
 import { of } from 'rxjs';
 import { elasticsearchServiceMock } from 'src/core/server/mocks';
-import type { RuleDataClient } from '../../../../../rule_registry/server';
+import type { IRuleDataClient } from '../../../../../rule_registry/server';
 import { PluginSetupContract as AlertingPluginSetupContract } from '../../../../../alerting/server';
-import { APMConfig } from '../../..';
+import { APMConfig, APM_SERVER_FEATURE_ID } from '../../..';
 
 export const createRuleTypeMocks = () => {
   let alertExecutor: (...args: any[]) => Promise<any>;
@@ -38,6 +38,9 @@ export const createRuleTypeMocks = () => {
 
   const services = {
     scopedClusterClient: elasticsearchServiceMock.createScopedClusterClient(),
+    savedObjectsClient: {
+      get: () => ({ attributes: { consumer: APM_SERVER_FEATURE_ID } }),
+    },
     alertInstanceFactory: jest.fn(() => ({ scheduleActions })),
     alertWithLifecycle: jest.fn(),
     logger: loggerMock,
@@ -59,7 +62,9 @@ export const createRuleTypeMocks = () => {
             bulk: jest.fn(),
           };
         },
-      } as unknown) as RuleDataClient,
+        isWriteEnabled: jest.fn(() => true),
+        indexName: '.alerts-observability.apm.alerts',
+      } as unknown) as IRuleDataClient,
     },
     services,
     scheduleActions,
@@ -67,6 +72,13 @@ export const createRuleTypeMocks = () => {
       return alertExecutor({
         services,
         params,
+        rule: {
+          consumer: APM_SERVER_FEATURE_ID,
+          name: 'name',
+          producer: 'producer',
+          ruleTypeId: 'ruleTypeId',
+          ruleTypeName: 'ruleTypeName',
+        },
         startedAt: new Date(),
       });
     },

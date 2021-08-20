@@ -13,11 +13,12 @@ import { I18nProvider } from '@kbn/i18n/react';
 import useObservable from 'react-use/lib/useObservable';
 import { KibanaFeature } from '../../../features/common';
 import { Section, routeToRuleDetails, legacyRouteToRuleDetails } from './constants';
-import { ActionTypeRegistryContract, AlertTypeRegistryContract } from '../types';
+import { ActionTypeRegistryContract, RuleTypeRegistryContract } from '../types';
 import { ChartsPluginStart } from '../../../../../src/plugins/charts/public';
 import { DataPublicPluginStart } from '../../../../../src/plugins/data/public';
 import { PluginStartContract as AlertingStart } from '../../../alerting/public';
 import type { SpacesPluginStart } from '../../../spaces/public';
+import type { SpacesOssPluginStart } from '../../../../../src/plugins/spaces_oss/public';
 
 import { suspendedComponentWithProps } from './lib/suspended_component_with_props';
 import { Storage } from '../../../../../src/plugins/kibana_utils/public';
@@ -36,10 +37,11 @@ export interface TriggersAndActionsUiServices extends CoreStart {
   charts: ChartsPluginStart;
   alerting?: AlertingStart;
   spaces?: SpacesPluginStart;
+  spacesOss: SpacesOssPluginStart;
   storage?: Storage;
   setBreadcrumbs: (crumbs: ChromeBreadcrumb[]) => void;
   actionTypeRegistry: ActionTypeRegistryContract;
-  alertTypeRegistry: AlertTypeRegistryContract;
+  ruleTypeRegistry: RuleTypeRegistryContract;
   history: ScopedHistory;
   kibanaFeatures: KibanaFeature[];
   element: HTMLElement;

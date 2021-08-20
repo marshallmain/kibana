@@ -9,11 +9,12 @@ import { buildThreatMappingFilter } from './build_threat_mapping_filter';
 
 import { getFilter } from '../get_filter';
 import { searchAfterAndBulkCreate } from '../search_after_bulk_create';
+import { buildReasonMessageForThreatMatchAlert } from '../reason_formatters';
 import { CreateThreatSignalOptions } from './types';
 import { SearchAfterAndBulkCreateReturnType } from '../types';
 
 export const createThreatSignal = async ({
-  tuples,
+  tuple,
   threatMapping,
   threatEnrichment,
   query,
@@ -31,10 +32,11 @@ export const createThreatSignal = async ({
   outputIndex,
   ruleSO,
   searchAfterSize,
-  refresh,
   buildRuleMessage,
   currentThreatList,
   currentResult,
+  bulkCreate,
+  wrapHits,
 }: CreateThreatSignalOptions): Promise<SearchAfterAndBulkCreateReturnType> => {
   const threatFilter = buildThreatMappingFilter({
     threatMapping,
@@ -69,7 +71,7 @@ export const createThreatSignal = async ({
     );
 
     const result = await searchAfterAndBulkCreate({
-      tuples,
+      tuple,
       listClient,
       exceptionsList: exceptionItems,
       ruleSO,
@@ -81,10 +83,15 @@ export const createThreatSignal = async ({
       signalsIndex: outputIndex,
       filter: esFilter,
       pageSize: searchAfterSize,
-      refresh,
       buildRuleMessage,
+      buildReasonMessage: buildReasonMessageForThreatMatchAlert,
       enrichment: threatEnrichment,
+      bulkCreate,
+      wrapHits,
+      sortOrder: 'desc',
+      trackTotalHits: false,
     });
+
     logger.debug(
       buildRuleMessage(
         `${

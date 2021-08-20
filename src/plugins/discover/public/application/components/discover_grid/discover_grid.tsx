@@ -28,7 +28,6 @@ import { DiscoverGridFlyout } from './discover_grid_flyout';
 import { DiscoverGridContext } from './discover_grid_context';
 import { getRenderCellValueFn } from './get_render_cell_value';
 import { DiscoverGridSettings } from './types';
-import { SortPairArr } from '../../angular/doc_table/lib/get_sort';
 import {
   getEuiGridColumns,
   getLeadControlColumns,
@@ -40,6 +39,7 @@ import { getDisplayedColumns } from '../../helpers/columns';
 import { KibanaContextProvider } from '../../../../../kibana_react/public';
 import { MAX_DOC_FIELDS_DISPLAYED } from '../../../../common';
 import { DiscoverGridDocumentToolbarBtn, getDocId } from './discover_grid_document_selection';
+import { SortPairArr } from '../../apps/main/components/doc_table/lib/get_sort';
 
 interface SortObj {
   id: string;
@@ -51,6 +51,10 @@ export interface DiscoverGridProps {
    * Determines which element labels the grid for ARIA
    */
   ariaLabelledBy: string;
+  /**
+   * Optional class name to apply
+   */
+  className?: string;
   /**
    * Determines which columns are displayed
    */
@@ -175,6 +179,7 @@ export const DiscoverGrid = ({
   isSortEnabled = true,
   isPaginationEnabled = true,
   controlColumnIds = ['openDetails', 'select'],
+  className,
 }: DiscoverGridProps) => {
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [isFilterActive, setIsFilterActive] = useState(false);
@@ -284,6 +289,7 @@ export const DiscoverGrid = ({
       ),
     [displayedColumns, indexPattern, showTimeCol, settings, defaultColumns, isSortEnabled]
   );
+
   const schemaDetectors = useMemo(() => getSchemaDetectors(), []);
   const columnsVisibility = useMemo(
     () => ({
@@ -363,11 +369,12 @@ export const DiscoverGrid = ({
     >
       <span
         data-test-subj="discoverDocTable"
-        data-render-complete={isLoading ? 'false' : 'true'}
+        data-render-complete={!isLoading}
         data-shared-item=""
         data-title={searchTitle}
         data-description={searchDescription}
         data-document-number={displayedRows.length}
+        className={className}
       >
         <KibanaContextProvider services={{ uiSettings: services.uiSettings }}>
           <EuiDataGridMemoized

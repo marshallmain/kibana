@@ -6,6 +6,7 @@
  */
 
 import { Query, Filter } from 'src/plugins/data/public';
+import type { LayerType } from '../../common';
 
 export type OperationTypePre712 =
   | 'avg'
@@ -78,6 +79,110 @@ export interface LensDocShapePost712<VisualizationState = unknown> {
                 operationType: OperationTypePost712;
               }
             >;
+          }
+        >;
+      };
+    };
+    visualization: VisualizationState;
+    query: Query;
+    filters: Filter[];
+  };
+}
+
+export type LensDocShape713 = Omit<LensDocShapePost712, 'state'> & {
+  state: Omit<LensDocShapePost712['state'], 'datasourceStates'> & {
+    datasourceStates: {
+      indexpattern: Omit<
+        LensDocShapePost712['state']['datasourceStates']['indexpattern'],
+        'layers'
+      > & {
+        layers: Record<
+          string,
+          Omit<
+            LensDocShapePost712['state']['datasourceStates']['indexpattern']['layers'][string],
+            'columns'
+          > & {
+            columns: Record<
+              string,
+              | {
+                  operationType: OperationTypePost712;
+                }
+              | {
+                  operationType: 'date_histogram';
+                  params: {
+                    interval: string;
+                    timeZone?: string;
+                  };
+                }
+            >;
+          }
+        >;
+      };
+    };
+  };
+};
+
+export type LensDocShape714 = Omit<LensDocShapePost712, 'state'> & {
+  state: Omit<LensDocShapePost712['state'], 'datasourceStates'> & {
+    datasourceStates: {
+      indexpattern: Omit<
+        LensDocShapePost712['state']['datasourceStates']['indexpattern'],
+        'layers'
+      > & {
+        layers: Record<
+          string,
+          Omit<
+            LensDocShapePost712['state']['datasourceStates']['indexpattern']['layers'][string],
+            'columns'
+          > & {
+            columns: Record<
+              string,
+              | {
+                  operationType: OperationTypePost712;
+                }
+              | {
+                  operationType: 'date_histogram';
+                  params: {
+                    interval: string;
+                  };
+                }
+            >;
+          }
+        >;
+      };
+    };
+  };
+};
+
+interface LayerPre715 {
+  layerId: string;
+}
+
+export type VisStatePre715 = LayerPre715 | { layers: LayerPre715[] };
+
+interface LayerPost715 extends LayerPre715 {
+  layerType: LayerType;
+}
+
+export type VisStatePost715 = LayerPost715 | { layers: LayerPost715[] };
+
+export interface LensDocShape715<VisualizationState = unknown> {
+  visualizationType: string | null;
+  title: string;
+  expression: string | null;
+  state: {
+    datasourceMetaData: {
+      filterableIndexPatterns: Array<{ id: string; title: string }>;
+    };
+    datasourceStates: {
+      // This is hardcoded as our only datasource
+      indexpattern: {
+        currentIndexPatternId: string;
+        layers: Record<
+          string,
+          {
+            columnOrder: string[];
+            columns: Record<string, Record<string, unknown>>;
           }
         >;
       };

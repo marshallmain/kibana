@@ -95,6 +95,7 @@ exports[`Storyshots components/Assets/AssetManager no assets 1`] = `
           >
             <div
               className="euiTextColor euiTextColor--subdued"
+              style={Object {}}
             >
               <p>
                 Below are the image assets in this workpad. Any assets that are currently in use cannot be determined at this time. To reclaim space, delete assets.
@@ -116,20 +117,13 @@ exports[`Storyshots components/Assets/AssetManager no assets 1`] = `
                 size="xxl"
               />
               <div
-                className="euiSpacer euiSpacer--s"
+                className="euiSpacer euiSpacer--m"
               />
-              <span
-                className="euiTextColor euiTextColor--subdued"
+              <h2
+                className="euiTitle euiTitle--xsmall"
               >
-                <h2
-                  className="euiTitle euiTitle--xsmall"
-                >
-                  Import your assets to get started
-                </h2>
-                <div
-                  className="euiSpacer euiSpacer--m"
-                />
-              </span>
+                Import your assets to get started
+              </h2>
             </div>
           </div>
         </div>
@@ -285,6 +279,7 @@ exports[`Storyshots components/Assets/AssetManager two assets 1`] = `
           >
             <div
               className="euiTextColor euiTextColor--subdued"
+              style={Object {}}
             >
               <p>
                 Below are the image assets in this workpad. Any assets that are currently in use cannot be determined at this time. To reclaim space, delete assets.
@@ -332,6 +327,7 @@ exports[`Storyshots components/Assets/AssetManager two assets 1`] = `
                     <br />
                     <span
                       className="euiTextColor euiTextColor--subdued"
+                      style={Object {}}
                     >
                       <small>
                         (
@@ -507,6 +503,7 @@ exports[`Storyshots components/Assets/AssetManager two assets 1`] = `
                     <br />
                     <span
                       className="euiTextColor euiTextColor--subdued"
+                      style={Object {}}
                     >
                       <small>
                         (

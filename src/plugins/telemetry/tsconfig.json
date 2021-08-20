@@ -1,14 +1,20 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "composite": true,
     "outDir": "./target/types",
     "emitDeclarationOnly": true,
     "declaration": true,
     "declarationMap": true,
     "isolatedModules": true
   },
-  "include": ["public/**/**/*", "server/**/**/*", "common/**/*", "../../../typings/**/*"],
+  "include": [
+    "public/**/**/*",
+    "server/**/**/*",
+    "common/**/*",
+    "../../../typings/**/*",
+    "schema/oss_plugins.json",
+    "schema/oss_root.json",
+  ],
   "references": [
     { "path": "../../core/tsconfig.json" },
     { "path": "../../plugins/kibana_react/tsconfig.json" },

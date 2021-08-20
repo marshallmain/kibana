@@ -18,18 +18,17 @@ import {
   EuiDataGridSorting,
   EuiDataGridStyle,
 } from '@elastic/eui';
-import { CustomPaletteState, PaletteOutput } from 'src/plugins/charts/common';
-import { FormatFactory, LensFilterEvent, LensTableRowContextMenuEvent } from '../../types';
+import type { LensFilterEvent, LensTableRowContextMenuEvent } from '../../types';
+import type { FormatFactory } from '../../../common';
+import { LensGridDirection } from '../../../common/expressions';
 import { VisualizationContainer } from '../../visualization_container';
-import { EmptyPlaceholder } from '../../shared_components';
+import { EmptyPlaceholder, findMinMaxByColumnId } from '../../shared_components';
 import { LensIconChartDatatable } from '../../assets/chart_datatable';
-import { ColumnState } from '../visualization';
-import {
+import type {
   DataContextType,
   DatatableRenderProps,
   LensSortAction,
   LensResizeAction,
-  LensGridDirection,
   LensToggleAction,
 } from './types';
 import { createGridColumns } from './columns';
@@ -41,8 +40,8 @@ import {
   createGridSortingConfig,
   createTransposeColumnFilterHandler,
 } from './table_actions';
-import { findMinMaxByColumnId } from './shared_utils';
 import { CUSTOM_PALETTE } from '../../shared_components/coloring/constants';
+import { getOriginalId, getFinalSummaryConfiguration } from '../../../common/expressions';
 
 export const DataContext = React.createContext<DataContextType>({});
 
@@ -50,17 +49,6 @@ const gridStyle: EuiDataGridStyle = {
   border: 'horizontal',
   header: 'underline',
 };
-
-export interface ColumnConfig {
-  columns: Array<
-    Omit<ColumnState, 'palette'> & {
-      type: 'lens_datatable_column';
-      palette?: PaletteOutput<CustomPaletteState>;
-    }
-  >;
-  sortingColumnId: string | undefined;
-  sortingDirection: LensGridDirection;
-}
 
 export const DatatableComponent = (props: DatatableRenderProps) => {
   const [firstTable] = Object.values(props.data.tables);
@@ -179,34 +167,6 @@ export const DatatableComponent = (props: DatatableRenderProps) => {
     [onEditAction, setColumnConfig, columnConfig]
   );
 
-  const columns: EuiDataGridColumn[] = useMemo(
-    () =>
-      createGridColumns(
-        bucketColumns,
-        firstLocalTable,
-        handleFilterClick,
-        handleTransposedColumnClick,
-        isReadOnlySorted,
-        columnConfig,
-        visibleColumns,
-        formatFactory,
-        onColumnResize,
-        onColumnHide
-      ),
-    [
-      bucketColumns,
-      firstLocalTable,
-      handleFilterClick,
-      handleTransposedColumnClick,
-      isReadOnlySorted,
-      columnConfig,
-      visibleColumns,
-      formatFactory,
-      onColumnResize,
-      onColumnHide,
-    ]
-  );
-
   const isNumericMap: Record<string, boolean> = useMemo(() => {
     const numericMap: Record<string, boolean> = {};
     for (const column of firstLocalTable.columns) {
@@ -232,9 +192,40 @@ export const DatatableComponent = (props: DatatableRenderProps) => {
       columnConfig.columns
         .filter(({ columnId }) => isNumericMap[columnId])
         .map(({ columnId }) => columnId),
-      firstTable
+      firstTable,
+      getOriginalId
     );
   }, [firstTable, isNumericMap, columnConfig]);
+
+  const columns: EuiDataGridColumn[] = useMemo(
+    () =>
+      createGridColumns(
+        bucketColumns,
+        firstLocalTable,
+        handleFilterClick,
+        handleTransposedColumnClick,
+        isReadOnlySorted,
+        columnConfig,
+        visibleColumns,
+        formatFactory,
+        onColumnResize,
+        onColumnHide,
+        alignments
+      ),
+    [
+      bucketColumns,
+      firstLocalTable,
+      handleFilterClick,
+      handleTransposedColumnClick,
+      isReadOnlySorted,
+      columnConfig,
+      visibleColumns,
+      formatFactory,
+      onColumnResize,
+      onColumnHide,
+      alignments,
+    ]
+  );
 
   const trailingControlColumns: EuiDataGridControlColumn[] = useMemo(() => {
     if (!hasAtLeastOneRowClickAction || !onRowContextMenuClick) {
@@ -277,17 +268,63 @@ export const DatatableComponent = (props: DatatableRenderProps) => {
     [formatters, columnConfig, props.uiSettings]
   );
 
-  const columnVisibility = useMemo(() => ({ visibleColumns, setVisibleColumns: () => {} }), [
-    visibleColumns,
-  ]);
+  const columnVisibility = useMemo(
+    () => ({
+      visibleColumns,
+      setVisibleColumns: () => {},
+    }),
+    [visibleColumns]
+  );
 
   const sorting = useMemo<EuiDataGridSorting>(
     () => createGridSortingConfig(sortBy, sortDirection as LensGridDirection, onEditAction),
     [onEditAction, sortBy, sortDirection]
   );
 
+  const renderSummaryRow = useMemo(() => {
+    const columnsWithSummary = columnConfig.columns
+      .filter((col) => !!col.columnId && !col.hidden)
+      .map((config) => ({
+        columnId: config.columnId,
+        summaryRowValue: config.summaryRowValue,
+        ...getFinalSummaryConfiguration(config.columnId, config, firstTable),
+      }))
+      .filter(({ summaryRow }) => summaryRow !== 'none');
+
+    if (columnsWithSummary.length) {
+      const summaryLookup = Object.fromEntries(
+        columnsWithSummary.map(({ summaryRowValue, summaryLabel, columnId }) => [
+          columnId,
+          summaryLabel === '' ? `${summaryRowValue}` : `${summaryLabel}: ${summaryRowValue}`,
+        ])
+      );
+      return ({ columnId }: { columnId: string }) => {
+        const currentAlignment = alignments && alignments[columnId];
+        const alignmentClassName = `lnsTableCell--${currentAlignment}`;
+        const columnName =
+          columns.find(({ id }) => id === columnId)?.displayAsText?.replace(/ /g, '-') || columnId;
+        return summaryLookup[columnId] != null ? (
+          <div
+            className={`lnsTableCell ${alignmentClassName}`}
+            data-test-subj={`lnsDataTable-footer-${columnName}`}
+          >
+            {summaryLookup[columnId]}
+          </div>
+        ) : null;
+      };
+    }
+  }, [columnConfig.columns, alignments, firstTable, columns]);
+
   if (isEmpty) {
-    return <EmptyPlaceholder icon={LensIconChartDatatable} />;
+    return (
+      <VisualizationContainer
+        className="lnsDataTableContainer"
+        reportTitle={props.args.title}
+        reportDescription={props.args.description}
+      >
+        <EmptyPlaceholder icon={LensIconChartDatatable} />
+      </VisualizationContainer>
+    );
   }
 
   const dataGridAriaLabel =
@@ -323,6 +360,7 @@ export const DatatableComponent = (props: DatatableRenderProps) => {
           sorting={sorting}
           onColumnResize={onColumnResize}
           toolbarVisibility={false}
+          renderFooterCellValue={renderSummaryRow}
         />
       </DataContext.Provider>
     </VisualizationContainer>

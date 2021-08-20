@@ -15,8 +15,20 @@ import {
 } from 'src/core/server';
 import { Query, Filter } from 'src/plugins/data/public';
 import { PersistableFilter } from '../../common';
-import { LensDocShapePost712, LensDocShapePre712 } from './types';
-import { commonRenameOperationsForFormula } from './common_migrations';
+import {
+  LensDocShapePost712,
+  LensDocShapePre712,
+  LensDocShape713,
+  LensDocShape714,
+  LensDocShape715,
+  VisStatePost715,
+  VisStatePre715,
+} from './types';
+import {
+  commonRenameOperationsForFormula,
+  commonRemoveTimezoneDateHistogramParam,
+  commonUpdateVisLayerType,
+} from './common_migrations';
 
 interface LensDocShapePre710<VisualizationState = unknown> {
   visualizationType: string | null;
@@ -400,6 +412,24 @@ const renameOperationsForFormula: SavedObjectMigrationFn<
   };
 };
 
+const removeTimezoneDateHistogramParam: SavedObjectMigrationFn<LensDocShape713, LensDocShape714> = (
+  doc
+) => {
+  const newDoc = cloneDeep(doc);
+  return {
+    ...newDoc,
+    attributes: commonRemoveTimezoneDateHistogramParam(newDoc.attributes),
+  };
+};
+
+const addLayerTypeToVisualization: SavedObjectMigrationFn<
+  LensDocShape715<VisStatePre715>,
+  LensDocShape715<VisStatePost715>
+> = (doc) => {
+  const newDoc = cloneDeep(doc);
+  return { ...newDoc, attributes: commonUpdateVisLayerType(newDoc.attributes) };
+};
+
 export const migrations: SavedObjectMigrationMap = {
   '7.7.0': removeInvalidAccessors,
   // The order of these migrations matter, since the timefield migration relies on the aggConfigs
@@ -410,4 +440,6 @@ export const migrations: SavedObjectMigrationMap = {
   '7.12.0': transformTableState,
   '7.13.0': renameOperationsForFormula,
   '7.13.1': renameOperationsForFormula, // duplicate this migration in case a broken by value panel is added to the library
+  '7.14.0': removeTimezoneDateHistogramParam,
+  '7.15.0': addLayerTypeToVisualization,
 };

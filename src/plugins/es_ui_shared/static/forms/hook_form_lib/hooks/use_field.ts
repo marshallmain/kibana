@@ -15,6 +15,7 @@ import {
   FieldValidateResponse,
   ValidationError,
   FormData,
+  ValidationConfig,
 } from '../types';
 import { FIELD_TYPES, VALIDATION_TYPES } from '../constants';
 
@@ -33,7 +34,7 @@ export const useField = <T, FormType = FormData, I = T>(
   const {
     type = FIELD_TYPES.TEXT,
     defaultValue = '', // The value to use a fallback mecanism when no initial value is passed
-    initialValue = config.defaultValue ?? '', // The value explicitly passed
+    initialValue = config.defaultValue ?? (('' as unknown) as I), // The value explicitly passed
     isIncludedInOutput = true,
     label = '',
     labelAppend = '',
@@ -69,6 +70,7 @@ export const useField = <T, FormType = FormData, I = T>(
   const [value, setStateValue] = useState<I>(deserializeValue);
   const [errors, setStateErrors] = useState<ValidationError[]>([]);
   const [isPristine, setPristine] = useState(true);
+  const [isModified, setIsModified] = useState(false);
   const [isValidating, setValidating] = useState(false);
   const [isChangingValue, setIsChangingValue] = useState(false);
   const [isValidated, setIsValidated] = useState(false);
@@ -189,10 +191,12 @@ export const useField = <T, FormType = FormData, I = T>(
       {
         formData,
         value: valueToValidate,
+        onlyBlocking: runOnlyBlockingValidations,
         validationTypeToValidate,
       }: {
         formData: any;
         value: I;
+        onlyBlocking: boolean;
         validationTypeToValidate?: string;
       },
       clearFieldErrors: FieldHook['clearErrors']
@@ -203,9 +207,30 @@ export const useField = <T, FormType = FormData, I = T>(
 
       // By default, for fields that have an asynchronous validation
       // we will clear the errors as soon as the field value changes.
-      clearFieldErrors([VALIDATION_TYPES.FIELD, VALIDATION_TYPES.ASYNC]);
+      clearFieldErrors([
+        validationTypeToValidate ?? VALIDATION_TYPES.FIELD,
+        VALIDATION_TYPES.ASYNC,
+      ]);
 
       cancelInflightValidation();
+
+      const doByPassValidation = ({
+        type: validationType,
+        isBlocking,
+      }: ValidationConfig<FormType, string, I>) => {
+        if (
+          typeof validationTypeToValidate !== 'undefined' &&
+          validationType !== validationTypeToValidate
+        ) {
+          return true;
+        }
+
+        if (runOnlyBlockingValidations && isBlocking === false) {
+          return true;
+        }
+
+        return false;
+      };
 
       const runAsync = async () => {
         const validationErrors: ValidationError[] = [];
@@ -219,10 +244,7 @@ export const useField = <T, FormType = FormData, I = T>(
             type: validationType = VALIDATION_TYPES.FIELD,
           } = validation;
 
-          if (
-            typeof validationTypeToValidate !== 'undefined' &&
-            validationType !== validationTypeToValidate
-          ) {
+          if (doByPassValidation(validation)) {
             continue;
           }
 
@@ -265,10 +287,7 @@ export const useField = <T, FormType = FormData, I = T>(
             type: validationType = VALIDATION_TYPES.FIELD,
           } = validation;
 
-          if (
-            typeof validationTypeToValidate !== 'undefined' &&
-            validationType !== validationTypeToValidate
-          ) {
+          if (doByPassValidation(validation)) {
             continue;
           }
 
@@ -344,6 +363,7 @@ export const useField = <T, FormType = FormData, I = T>(
         formData = __getFormData$().value,
         value: valueToValidate = value,
         validationType,
+        onlyBlocking = false,
       } = validationData;
 
       setIsValidated(true);
@@ -377,6 +397,7 @@ export const useField = <T, FormType = FormData, I = T>(
           formData,
           value: valueToValidate,
           validationTypeToValidate: validationType,
+          onlyBlocking,
         },
         clearErrors
       );
@@ -456,58 +477,26 @@ export const useField = <T, FormType = FormData, I = T>(
     [errors]
   );
 
-  /**
-   * Handler to update the state and make sure the component is still mounted.
-   * When resetting the form, some field might get unmounted (e.g. a toggle on "true" becomes "false" and now certain fields should not be in the DOM).
-   * In that scenario there is a race condition in the "reset" method below, because the useState() hook is not synchronous.
-   *
-   * A better approach would be to have the state in a reducer and being able to update all values in a single dispatch action.
-   */
-  const updateStateIfMounted = useCallback(
-    (
-      state: 'isPristine' | 'isValidating' | 'isChangingValue' | 'isValidated' | 'errors' | 'value',
-      nextValue: any
-    ) => {
-      if (isMounted.current === false) {
-        return;
-      }
-
-      switch (state) {
-        case 'value':
-          return setValue(nextValue);
-        case 'errors':
-          return setStateErrors(nextValue);
-        case 'isChangingValue':
-          return setIsChangingValue(nextValue);
-        case 'isPristine':
-          return setPristine(nextValue);
-        case 'isValidated':
-          return setIsValidated(nextValue);
-        case 'isValidating':
-          return setValidating(nextValue);
-      }
-    },
-    [setValue]
-  );
-
   const reset: FieldHook<T, I>['reset'] = useCallback(
     (resetOptions = { resetValue: true }) => {
       const { resetValue = true, defaultValue: updatedDefaultValue } = resetOptions;
 
-      updateStateIfMounted('isPristine', true);
-      updateStateIfMounted('isValidating', false);
-      updateStateIfMounted('isChangingValue', false);
-      updateStateIfMounted('isValidated', false);
-      updateStateIfMounted('errors', []);
+      setPristine(true);
+      setIsModified(false);
+      setValidating(false);
+      setIsChangingValue(false);
+      setIsValidated(false);
+      setStateErrors([]);
 
       if (resetValue) {
         hasBeenReset.current = true;
         const newValue = deserializeValue(updatedDefaultValue ?? defaultValue);
-        updateStateIfMounted('value', newValue);
+        // updateStateIfMounted('value', newValue);
+        setValue(newValue);
         return newValue;
       }
     },
-    [updateStateIfMounted, deserializeValue, defaultValue]
+    [deserializeValue, defaultValue, setValue, setStateErrors]
   );
 
   // Don't take into account non blocker validation. Some are just warning (like trying to add a wrong ComboBox item)
@@ -523,6 +512,8 @@ export const useField = <T, FormType = FormData, I = T>(
       value,
       errors,
       isPristine,
+      isDirty: !isPristine,
+      isModified,
       isValid,
       isValidating,
       isValidated,
@@ -545,6 +536,7 @@ export const useField = <T, FormType = FormData, I = T>(
     helpText,
     value,
     isPristine,
+    isModified,
     errors,
     isValid,
     isValidating,
@@ -596,6 +588,15 @@ export const useField = <T, FormType = FormData, I = T>(
       }
     };
   }, [onValueChange]);
+
+  useEffect(() => {
+    setIsModified(() => {
+      if (typeof value === 'object') {
+        return JSON.stringify(value) !== JSON.stringify(initialValue);
+      }
+      return value !== initialValue;
+    });
+  }, [value, initialValue]);
 
   useEffect(() => {
     if (!isMounted.current) {

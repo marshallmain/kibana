@@ -7,42 +7,13 @@
 
 import { i18n } from '@kbn/i18n';
 import { IndexPattern, IndexPatternsContract, TimefilterContract } from 'src/plugins/data/public';
-import { LensFilterEvent } from './types';
-
-/** replaces the value `(empty) to empty string for proper filtering` */
-export const desanitizeFilterContext = (
-  context: LensFilterEvent['data']
-): LensFilterEvent['data'] => {
-  const emptyTextValue = i18n.translate('xpack.lens.indexpattern.emptyTextColumnValue', {
-    defaultMessage: '(empty)',
-  });
-  const result: LensFilterEvent['data'] = {
-    ...context,
-    data: context.data.map((point) =>
-      point.value === emptyTextValue
-        ? {
-            ...point,
-            value: '',
-            table: {
-              ...point.table,
-              rows: point.table.rows.map((row, index) =>
-                index === point.row
-                  ? {
-                      ...row,
-                      [point.table.columns[point.column].id]: '',
-                    }
-                  : row
-              ),
-            },
-          }
-        : point
-    ),
-  };
-  if (context.timeFieldName) {
-    result.timeFieldName = context.timeFieldName;
-  }
-  return result;
-};
+import { IUiSettingsClient } from 'kibana/public';
+import moment from 'moment-timezone';
+import { SavedObjectReference } from 'kibana/public';
+import { uniq } from 'lodash';
+import { Document } from './persistence/saved_object_store';
+import { Datasource, DatasourceMap } from './types';
+import { DatasourceStates } from './state_management';
 
 export function getVisualizeGeoFieldMessage(fieldType: string) {
   return i18n.translate('xpack.lens.visualizeGeoFieldMessage', {
@@ -63,9 +34,49 @@ export const getResolvedDateRange = function (timefilter: TimefilterContract) {
 export function containsDynamicMath(dateMathString: string) {
   return dateMathString.includes('now');
 }
-export const TIME_LAG_PERCENTAGE_LIMIT = 0.02;
 
-export async function getAllIndexPatterns(
+export function getTimeZone(uiSettings: IUiSettingsClient) {
+  const configuredTimeZone = uiSettings.get('dateFormat:tz');
+  if (configuredTimeZone === 'Browser') {
+    return moment.tz.guess();
+  }
+
+  return configuredTimeZone;
+}
+export function getActiveDatasourceIdFromDoc(doc?: Document) {
+  if (!doc) {
+    return null;
+  }
+
+  const [firstDatasourceFromDoc] = Object.keys(doc.state.datasourceStates);
+  return firstDatasourceFromDoc || null;
+}
+
+export const getInitialDatasourceId = (datasourceMap: DatasourceMap, doc?: Document) => {
+  return (doc && getActiveDatasourceIdFromDoc(doc)) || Object.keys(datasourceMap)[0] || null;
+};
+
+export function getIndexPatternsIds({
+  activeDatasources,
+  datasourceStates,
+}: {
+  activeDatasources: Record<string, Datasource>;
+  datasourceStates: DatasourceStates;
+}): string[] {
+  const references: SavedObjectReference[] = [];
+  Object.entries(activeDatasources).forEach(([id, datasource]) => {
+    const { savedObjectReferences } = datasource.getPersistableState(datasourceStates[id].state);
+    references.push(...savedObjectReferences);
+  });
+
+  const uniqueFilterableIndexPatternIds = uniq(
+    references.filter(({ type }) => type === 'index-pattern').map(({ id }) => id)
+  );
+
+  return uniqueFilterableIndexPatternIds;
+}
+
+export async function getIndexPatternsObjects(
   ids: string[],
   indexPatternsService: IndexPatternsContract
 ): Promise<{ indexPatterns: IndexPattern[]; rejectedIds: string[] }> {

@@ -5,21 +5,29 @@
  * 2.0.
  */
 
-import { useParams } from 'react-router-dom';
 import { useApmPluginContext } from '../apm_plugin/use_apm_plugin_context';
 import { useUrlParams } from '../url_params_context/use_url_params';
 import { useFetcher } from '../../hooks/use_fetcher';
 import type { APMServiceAlert } from './apm_service_context';
 
-export function useServiceAlertsFetcher(transactionType?: string) {
+export function useServiceAlertsFetcher({
+  serviceName,
+  transactionType,
+  environment,
+  kuery,
+}: {
+  serviceName?: string;
+  transactionType?: string;
+  environment: string;
+  kuery: string;
+}) {
   const {
     plugins: { observability },
   } = useApmPluginContext();
 
   const {
-    urlParams: { start, end, environment },
+    urlParams: { start, end },
   } = useUrlParams();
-  const { serviceName } = useParams<{ serviceName?: string }>();
 
   const experimentalAlertsEnabled = observability.isAlertingExperienceEnabled();
 

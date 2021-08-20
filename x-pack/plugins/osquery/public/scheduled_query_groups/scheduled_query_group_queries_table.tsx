@@ -15,16 +15,30 @@ import {
   EuiToolTip,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import { FormattedMessage } from '@kbn/i18n/react';
 
 import {
   TypedLensByValueInput,
   PersistedIndexPatternLayer,
   PieVisualizationState,
 } from '../../../lens/public';
-import { PackagePolicy, PackagePolicyInputStream } from '../../../fleet/common';
 import { FilterStateStore } from '../../../../../src/plugins/data/common';
 import { useKibana, isModifiedEvent, isLeftClickEvent } from '../common/lib/kibana';
+import { PlatformIcons } from './queries/platforms';
+import { OsqueryManagerPackagePolicyInputStream } from '../../common/types';
+
+const VIEW_IN_DISCOVER = i18n.translate(
+  'xpack.osquery.scheduledQueryGroup.queriesTable.viewDiscoverResultsActionAriaLabel',
+  {
+    defaultMessage: 'View in Discover',
+  }
+);
+
+const VIEW_IN_LENS = i18n.translate(
+  'xpack.osquery.scheduledQueryGroup.queriesTable.viewLensResultsActionAriaLabel',
+  {
+    defaultMessage: 'View in Lens',
+  }
+);
 
 export enum ViewResultsActionButtonType {
   icon = 'icon',
@@ -79,6 +93,7 @@ function getLensAttributes(actionId: string): TypedLensByValueInput['attributes'
         legendDisplay: 'default',
         nestedLegend: false,
         layerId: 'layer1',
+        layerType: 'data',
         metric: 'ed999e9d-204c-465b-897f-fe1a125b39ed',
         numberDisplay: 'percent',
         groups: ['8690befd-fd69-4246-af4a-dd485d2a3b38'],
@@ -152,7 +167,7 @@ const ViewResultsInLensActionComponent: React.FC<ViewResultsInDiscoverActionProp
 
   const handleClick = useCallback(
     (event) => {
-      const openInNewWindow = !(!isModifiedEvent(event) && isLeftClickEvent(event));
+      const openInNewTab = !(!isModifiedEvent(event) && isLeftClickEvent(event));
 
       event.preventDefault();
 
@@ -166,7 +181,9 @@ const ViewResultsInLensActionComponent: React.FC<ViewResultsInDiscoverActionProp
           },
           attributes: getLensAttributes(actionId),
         },
-        openInNewWindow
+        {
+          openInNewTab,
+        }
       );
     },
     [actionId, endDate, lensService, startDate]
@@ -180,33 +197,18 @@ const ViewResultsInLensActionComponent: React.FC<ViewResultsInDiscoverActionProp
         onClick={handleClick}
         disabled={!lensService?.canUseEditor()}
       >
-        <FormattedMessage
-          id="xpack.osquery.scheduledQueryGroup.queriesTable.viewLensResultsActionAriaLabel"
-          defaultMessage="View results in Lens"
-        />
+        {VIEW_IN_LENS}
       </EuiButtonEmpty>
     );
   }
 
   return (
-    <EuiToolTip
-      content={i18n.translate(
-        'xpack.osquery.scheduledQueryGroup.queriesTable.viewLensResultsActionAriaLabel',
-        {
-          defaultMessage: 'View results in Lens',
-        }
-      )}
-    >
+    <EuiToolTip content={VIEW_IN_LENS}>
       <EuiButtonIcon
         iconType="lensApp"
         disabled={!lensService?.canUseEditor()}
         onClick={handleClick}
-        aria-label={i18n.translate(
-          'xpack.osquery.scheduledQueryGroup.queriesTable.viewLensResultsActionAriaLabel',
-          {
-            defaultMessage: 'View results in Lens',
-          }
-        )}
+        aria-label={VIEW_IN_LENS}
       />
     </EuiToolTip>
   );
@@ -257,7 +259,7 @@ const ViewResultsInDiscoverActionComponent: React.FC<ViewResultsInDiscoverAction
               }
             : {
                 to: 'now',
-                from: 'now-15m',
+                from: 'now-1d',
                 mode: 'relative',
               },
       });
@@ -269,33 +271,14 @@ const ViewResultsInDiscoverActionComponent: React.FC<ViewResultsInDiscoverAction
   if (buttonType === ViewResultsActionButtonType.button) {
     return (
       <EuiButtonEmpty size="xs" iconType="discoverApp" href={discoverUrl}>
-        <FormattedMessage
-          id="xpack.osquery.scheduledQueryGroup.queriesTable.viewDiscoverResultsActionAriaLabel"
-          defaultMessage="View results in Discover"
-        />
+        {VIEW_IN_DISCOVER}
       </EuiButtonEmpty>
     );
   }
 
   return (
-    <EuiToolTip
-      content={i18n.translate(
-        'xpack.osquery.scheduledQueryGroup.queriesTable.viewDiscoverResultsActionAriaLabel',
-        {
-          defaultMessage: 'View results in Discover',
-        }
-      )}
-    >
-      <EuiButtonIcon
-        iconType="discoverApp"
-        href={discoverUrl}
-        aria-label={i18n.translate(
-          'xpack.osquery.scheduledQueryGroup.queriesTable.viewDiscoverResultsActionAriaLabel',
-          {
-            defaultMessage: 'View results in Discover',
-          }
-        )}
-      />
+    <EuiToolTip content={VIEW_IN_DISCOVER}>
+      <EuiButtonIcon iconType="discoverApp" href={discoverUrl} aria-label={VIEW_IN_DISCOVER} />
     </EuiToolTip>
   );
 };
@@ -303,12 +286,12 @@ const ViewResultsInDiscoverActionComponent: React.FC<ViewResultsInDiscoverAction
 export const ViewResultsInDiscoverAction = React.memo(ViewResultsInDiscoverActionComponent);
 
 interface ScheduledQueryGroupQueriesTableProps {
-  data: Pick<PackagePolicy, 'inputs'>;
+  data: OsqueryManagerPackagePolicyInputStream[];
   editMode?: boolean;
-  onDeleteClick?: (item: PackagePolicyInputStream) => void;
-  onEditClick?: (item: PackagePolicyInputStream) => void;
-  selectedItems?: PackagePolicyInputStream[];
-  setSelectedItems?: (selection: PackagePolicyInputStream[]) => void;
+  onDeleteClick?: (item: OsqueryManagerPackagePolicyInputStream) => void;
+  onEditClick?: (item: OsqueryManagerPackagePolicyInputStream) => void;
+  selectedItems?: OsqueryManagerPackagePolicyInputStream[];
+  setSelectedItems?: (selection: OsqueryManagerPackagePolicyInputStream[]) => void;
 }
 
 const ScheduledQueryGroupQueriesTableComponent: React.FC<ScheduledQueryGroupQueriesTableProps> = ({
@@ -320,7 +303,7 @@ const ScheduledQueryGroupQueriesTableComponent: React.FC<ScheduledQueryGroupQuer
   setSelectedItems,
 }) => {
   const renderDeleteAction = useCallback(
-    (item: PackagePolicyInputStream) => (
+    (item: OsqueryManagerPackagePolicyInputStream) => (
       <EuiButtonIcon
         color="danger"
         // @ts-expect-error update types
@@ -342,7 +325,7 @@ const ScheduledQueryGroupQueriesTableComponent: React.FC<ScheduledQueryGroupQuer
   );
 
   const renderEditAction = useCallback(
-    (item: PackagePolicyInputStream) => (
+    (item: OsqueryManagerPackagePolicyInputStream) => (
       <EuiButtonIcon
         color="primary"
         // @ts-expect-error update types
@@ -369,6 +352,21 @@ const ScheduledQueryGroupQueriesTableComponent: React.FC<ScheduledQueryGroupQuer
         {query}
       </EuiCodeBlock>
     ),
+    []
+  );
+
+  const renderPlatformColumn = useCallback(
+    (platform: string) => <PlatformIcons platform={platform} />,
+    []
+  );
+
+  const renderVersionColumn = useCallback(
+    (version: string) =>
+      version
+        ? `${version}`
+        : i18n.translate('xpack.osquery.scheduledQueryGroup.queriesTable.osqueryVersionAllLabel', {
+            defaultMessage: 'ALL',
+          }),
     []
   );
 
@@ -416,6 +414,20 @@ const ScheduledQueryGroupQueriesTableComponent: React.FC<ScheduledQueryGroupQuer
         render: renderQueryColumn,
       },
       {
+        field: 'vars.platform.value',
+        name: i18n.translate('xpack.osquery.scheduledQueryGroup.queriesTable.platformColumnTitle', {
+          defaultMessage: 'Platform',
+        }),
+        render: renderPlatformColumn,
+      },
+      {
+        field: 'vars.version.value',
+        name: i18n.translate('xpack.osquery.scheduledQueryGroup.queriesTable.versionColumnTitle', {
+          defaultMessage: 'Min Osquery version',
+        }),
+        render: renderVersionColumn,
+      },
+      {
         name: editMode
           ? i18n.translate('xpack.osquery.scheduledQueryGroup.queriesTable.actionsColumnTitle', {
               defaultMessage: 'Actions',
@@ -452,21 +464,26 @@ const ScheduledQueryGroupQueriesTableComponent: React.FC<ScheduledQueryGroupQuer
       renderDiscoverResultsAction,
       renderEditAction,
       renderLensResultsAction,
+      renderPlatformColumn,
       renderQueryColumn,
+      renderVersionColumn,
     ]
   );
 
   const sorting = useMemo(
     () => ({
       sort: {
-        field: 'vars.id.value' as keyof PackagePolicyInputStream,
+        field: 'vars.id.value' as keyof OsqueryManagerPackagePolicyInputStream,
         direction: 'asc' as const,
       },
     }),
     []
   );
 
-  const itemId = useCallback((item: PackagePolicyInputStream) => get('vars.id.value', item), []);
+  const itemId = useCallback(
+    (item: OsqueryManagerPackagePolicyInputStream) => get('vars.id.value', item),
+    []
+  );
 
   const selection = useMemo(
     () => ({
@@ -477,8 +494,8 @@ const ScheduledQueryGroupQueriesTableComponent: React.FC<ScheduledQueryGroupQuer
   );
 
   return (
-    <EuiBasicTable<PackagePolicyInputStream>
-      items={data.inputs[0].streams}
+    <EuiBasicTable<OsqueryManagerPackagePolicyInputStream>
+      items={data}
       itemId={itemId}
       columns={columns}
       sorting={sorting}

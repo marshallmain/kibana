@@ -5,57 +5,50 @@
  * 2.0.
  */
 
-import { configureStore, DeepPartial, getDefaultMiddleware } from '@reduxjs/toolkit';
+import { configureStore, getDefaultMiddleware, DeepPartial } from '@reduxjs/toolkit';
 import logger from 'redux-logger';
 import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
-import { appSlice, initialState } from './app_slice';
+import { lensSlice } from './lens_slice';
 import { timeRangeMiddleware } from './time_range_middleware';
-import { externalContextMiddleware } from './external_context_middleware';
-
-import { DataPublicPluginStart } from '../../../../../src/plugins/data/public';
-import { LensAppState, LensState } from './types';
+import { optimizingMiddleware } from './optimizing_middleware';
+import { LensState, LensStoreDeps } from './types';
+import { initMiddleware } from './init_middleware';
 export * from './types';
+export * from './selectors';
 
 export const reducer = {
-  app: appSlice.reducer,
+  lens: lensSlice.reducer,
 };
 
 export const {
-  setState,
+  loadInitial,
   navigateAway,
-  onChangeFromEditorFrame,
+  setState,
+  setSaveable,
   onActiveDataChange,
-} = appSlice.actions;
-
-export const getPreloadedState = (initializedState: Partial<LensAppState>) => {
-  const state = {
-    app: {
-      ...initialState,
-      ...initializedState,
-    },
-  } as DeepPartial<LensState>;
-  return state;
-};
-
-type PreloadedState = ReturnType<typeof getPreloadedState>;
+  updateState,
+  updateDatasourceState,
+  updateVisualizationState,
+  updateLayer,
+  switchVisualization,
+  selectSuggestion,
+  rollbackSuggestion,
+  submitSuggestion,
+  switchDatasource,
+  setToggleFullscreen,
+} = lensSlice.actions;
 
 export const makeConfigureStore = (
-  preloadedState: PreloadedState,
-  { data }: { data: DataPublicPluginStart }
+  storeDeps: LensStoreDeps,
+  preloadedState: DeepPartial<LensState>
 ) => {
   const middleware = [
     ...getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [
-          'app/setState',
-          'app/onChangeFromEditorFrame',
-          'app/onActiveDataChange',
-          'app/navigateAway',
-        ],
-      },
+      serializableCheck: false,
     }),
-    timeRangeMiddleware(data),
-    externalContextMiddleware(data),
+    initMiddleware(storeDeps),
+    optimizingMiddleware(),
+    timeRangeMiddleware(storeDeps.lensServices.data),
   ];
   if (process.env.NODE_ENV === 'development') middleware.push(logger);
 

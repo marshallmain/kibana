@@ -13,25 +13,37 @@ import { debounce } from 'lodash';
  * are in flight because the user is currently modifying the value.
  */
 
-export const useDebouncedValue = <T>({
-  onChange,
-  value,
-}: {
-  onChange: (val: T) => void;
-  value: T;
-}) => {
+export const useDebouncedValue = <T>(
+  {
+    onChange,
+    value,
+  }: {
+    onChange: (val: T) => void;
+    value: T;
+  },
+  { allowFalsyValue }: { allowFalsyValue?: boolean } = {}
+) => {
   const [inputValue, setInputValue] = useState(value);
   const unflushedChanges = useRef(false);
+  const shouldUpdateWithFalsyValue = Boolean(allowFalsyValue);
 
   // Save the initial value
   const initialValue = useRef(value);
 
+  const flushChangesTimeout = useRef<NodeJS.Timeout | undefined>();
+
   const onChangeDebounced = useMemo(() => {
     const callback = debounce((val: T) => {
       onChange(val);
-      unflushedChanges.current = false;
+      // do not reset unflushed flag right away, wait a bit for upstream to pick it up
+      flushChangesTimeout.current = setTimeout(() => {
+        unflushedChanges.current = false;
+      }, 256);
     }, 256);
     return (val: T) => {
+      if (flushChangesTimeout.current) {
+        clearTimeout(flushChangesTimeout.current);
+      }
       unflushedChanges.current = true;
       callback(val);
     };
@@ -45,7 +57,10 @@ export const useDebouncedValue = <T>({
 
   const handleInputChange = (val: T) => {
     setInputValue(val);
-    onChangeDebounced(val || initialValue.current);
+    const valueToUpload = shouldUpdateWithFalsyValue
+      ? val ?? initialValue.current
+      : val || initialValue.current;
+    onChangeDebounced(valueToUpload);
   };
 
   return { inputValue, handleInputChange, initialValue: initialValue.current };

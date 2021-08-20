@@ -8,8 +8,7 @@
 import { EuiPanel, EuiTitle } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import React from 'react';
-import { useParams } from 'react-router-dom';
-import { RULE_ID } from '../../../../../../rule_registry/common/technical_rule_data_field_names';
+import { ALERT_RULE_TYPE_ID } from '../../../../../../rule_registry/common/technical_rule_data_field_names';
 import { AlertType } from '../../../../../common/alert_types';
 import { APIReturnType } from '../../../../services/rest/createCallApmApi';
 import { asPercent } from '../../../../../common/utils/formatters';
@@ -30,6 +29,8 @@ function yLabelFormat(y?: number | null) {
 interface Props {
   height?: number;
   showAnnotations?: boolean;
+  kuery: string;
+  environment: string;
 }
 
 type ErrorRate = APIReturnType<'GET /api/apm/services/{serviceName}/transactions/charts/error_rate'>;
@@ -50,13 +51,12 @@ const INITIAL_STATE: ErrorRate = {
 export function TransactionErrorRateChart({
   height,
   showAnnotations = true,
+  environment,
+  kuery,
 }: Props) {
   const theme = useTheme();
-  const { serviceName } = useParams<{ serviceName?: string }>();
   const {
     urlParams: {
-      environment,
-      kuery,
       start,
       end,
       transactionName,
@@ -64,7 +64,7 @@ export function TransactionErrorRateChart({
       comparisonType,
     },
   } = useUrlParams();
-  const { transactionType, alerts } = useApmServiceContext();
+  const { serviceName, transactionType, alerts } = useApmServiceContext();
   const comparisonChartThem = getComparisonChartTheme(theme);
   const { comparisonStart, comparisonEnd } = getTimeRangeComparison({
     start,
@@ -116,7 +116,7 @@ export function TransactionErrorRateChart({
       type: 'linemark',
       color: theme.eui.euiColorVis7,
       title: i18n.translate('xpack.apm.errorRate.chart.errorRate', {
-        defaultMessage: 'Error rate (avg.)',
+        defaultMessage: 'Failed transaction rate (avg.)',
       }),
     },
     ...(comparisonEnabled
@@ -135,11 +135,11 @@ export function TransactionErrorRateChart({
   ];
 
   return (
-    <EuiPanel>
+    <EuiPanel hasBorder={true}>
       <EuiTitle size="xs">
         <h2>
           {i18n.translate('xpack.apm.errorRate', {
-            defaultMessage: 'Error rate',
+            defaultMessage: 'Failed transaction rate',
           })}
         </h2>
       </EuiTitle>
@@ -153,7 +153,8 @@ export function TransactionErrorRateChart({
         yDomain={{ min: 0, max: 1 }}
         customTheme={comparisonChartThem}
         alerts={alerts.filter(
-          (alert) => alert[RULE_ID]?.[0] === AlertType.TransactionErrorRate
+          (alert) =>
+            alert[ALERT_RULE_TYPE_ID]?.[0] === AlertType.TransactionErrorRate
         )}
       />
     </EuiPanel>

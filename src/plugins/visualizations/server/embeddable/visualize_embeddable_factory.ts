@@ -8,39 +8,55 @@
 
 import { flow } from 'lodash';
 import { EmbeddableRegistryDefinition } from 'src/plugins/embeddable/server';
-import { SerializableState } from '../../../kibana_utils/common';
+import type { SerializableRecord } from '@kbn/utility-types';
 import {
   commonAddSupportOfDualIndexSelectionModeInTSVB,
   commonHideTSVBLastValueIndicator,
   commonRemoveDefaultIndexPatternAndTimeFieldFromTSVBModel,
+  commonMigrateVislibPie,
   commonAddEmptyValueColorRule,
+  commonMigrateTagCloud,
 } from '../migrations/visualization_common_migrations';
 
-const byValueAddSupportOfDualIndexSelectionModeInTSVB = (state: SerializableState) => {
+const byValueAddSupportOfDualIndexSelectionModeInTSVB = (state: SerializableRecord) => {
   return {
     ...state,
     savedVis: commonAddSupportOfDualIndexSelectionModeInTSVB(state.savedVis),
   };
 };
 
-const byValueHideTSVBLastValueIndicator = (state: SerializableState) => {
+const byValueHideTSVBLastValueIndicator = (state: SerializableRecord) => {
   return {
     ...state,
     savedVis: commonHideTSVBLastValueIndicator(state.savedVis),
   };
 };
 
-const byValueRemoveDefaultIndexPatternAndTimeFieldFromTSVBModel = (state: SerializableState) => {
+const byValueRemoveDefaultIndexPatternAndTimeFieldFromTSVBModel = (state: SerializableRecord) => {
   return {
     ...state,
     savedVis: commonRemoveDefaultIndexPatternAndTimeFieldFromTSVBModel(state.savedVis),
   };
 };
 
-const byValueAddEmptyValueColorRule = (state: SerializableState) => {
+const byValueAddEmptyValueColorRule = (state: SerializableRecord) => {
   return {
     ...state,
     savedVis: commonAddEmptyValueColorRule(state.savedVis),
+  };
+};
+
+const byValueMigrateVislibPie = (state: SerializableRecord) => {
+  return {
+    ...state,
+    savedVis: commonMigrateVislibPie(state.savedVis),
+  };
+};
+
+const byValueMigrateTagcloud = (state: SerializableRecord) => {
+  return {
+    ...state,
+    savedVis: commonMigrateTagCloud(state.savedVis),
   };
 };
 
@@ -55,7 +71,8 @@ export const visualizeEmbeddableFactory = (): EmbeddableRegistryDefinition => {
           byValueHideTSVBLastValueIndicator,
           byValueRemoveDefaultIndexPatternAndTimeFieldFromTSVBModel
         )(state),
-      '7.14.0': (state) => flow(byValueAddEmptyValueColorRule)(state),
+      '7.14.0': (state) =>
+        flow(byValueAddEmptyValueColorRule, byValueMigrateVislibPie, byValueMigrateTagcloud)(state),
     },
   };
 };

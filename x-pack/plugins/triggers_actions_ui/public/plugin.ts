@@ -26,6 +26,7 @@ import { PluginStartContract as AlertingStart } from '../../alerting/public';
 import { DataPublicPluginStart } from '../../../../src/plugins/data/public';
 import { Storage } from '../../../../src/plugins/kibana_utils/public';
 import type { SpacesPluginStart } from '../../spaces/public';
+import type { SpacesOssPluginStart } from '../../../../src/plugins/spaces_oss/public';
 
 import { getAddConnectorFlyoutLazy } from './common/get_add_connector_flyout';
 import { getEditConnectorFlyoutLazy } from './common/get_edit_connector_flyout';
@@ -43,12 +44,12 @@ import type {
 
 export interface TriggersAndActionsUIPublicPluginSetup {
   actionTypeRegistry: TypeRegistry<ActionTypeModel>;
-  alertTypeRegistry: TypeRegistry<AlertTypeModel<any>>;
+  ruleTypeRegistry: TypeRegistry<AlertTypeModel<any>>;
 }
 
 export interface TriggersAndActionsUIPublicPluginStart {
   actionTypeRegistry: TypeRegistry<ActionTypeModel>;
-  alertTypeRegistry: TypeRegistry<AlertTypeModel<any>>;
+  ruleTypeRegistry: TypeRegistry<AlertTypeModel<any>>;
   getAddConnectorFlyout: (
     props: Omit<ConnectorAddFlyoutProps, 'actionTypeRegistry'>
   ) => ReactElement<ConnectorAddFlyoutProps>;
@@ -56,10 +57,10 @@ export interface TriggersAndActionsUIPublicPluginStart {
     props: Omit<ConnectorEditFlyoutProps, 'actionTypeRegistry'>
   ) => ReactElement<ConnectorEditFlyoutProps>;
   getAddAlertFlyout: (
-    props: Omit<AlertAddProps, 'actionTypeRegistry' | 'alertTypeRegistry'>
+    props: Omit<AlertAddProps, 'actionTypeRegistry' | 'ruleTypeRegistry'>
   ) => ReactElement<AlertAddProps>;
   getEditAlertFlyout: (
-    props: Omit<AlertEditProps, 'actionTypeRegistry' | 'alertTypeRegistry'>
+    props: Omit<AlertEditProps, 'actionTypeRegistry' | 'ruleTypeRegistry'>
   ) => ReactElement<AlertEditProps>;
 }
 
@@ -73,6 +74,7 @@ interface PluginsStart {
   charts: ChartsPluginStart;
   alerting?: AlertingStart;
   spaces?: SpacesPluginStart;
+  spacesOss: SpacesOssPluginStart;
   navigateToApp: CoreStart['application']['navigateToApp'];
   features: FeaturesPluginStart;
 }
@@ -86,16 +88,16 @@ export class Plugin
       PluginsStart
     > {
   private actionTypeRegistry: TypeRegistry<ActionTypeModel>;
-  private alertTypeRegistry: TypeRegistry<AlertTypeModel>;
+  private ruleTypeRegistry: TypeRegistry<AlertTypeModel>;
 
   constructor() {
     this.actionTypeRegistry = new TypeRegistry<ActionTypeModel>();
-    this.alertTypeRegistry = new TypeRegistry<AlertTypeModel>();
+    this.ruleTypeRegistry = new TypeRegistry<AlertTypeModel>();
   }
 
   public setup(core: CoreSetup, plugins: PluginsSetup): TriggersAndActionsUIPublicPluginSetup {
     const actionTypeRegistry = this.actionTypeRegistry;
-    const alertTypeRegistry = this.alertTypeRegistry;
+    const ruleTypeRegistry = this.ruleTypeRegistry;
 
     const featureTitle = i18n.translate('xpack.triggersActionsUI.managementSection.displayName', {
       defaultMessage: 'Rules and Connectors',
@@ -148,12 +150,13 @@ export class Plugin
           charts: pluginsStart.charts,
           alerting: pluginsStart.alerting,
           spaces: pluginsStart.spaces,
+          spacesOss: pluginsStart.spacesOss,
           element: params.element,
           storage: new Storage(window.localStorage),
           setBreadcrumbs: params.setBreadcrumbs,
           history: params.history,
           actionTypeRegistry,
-          alertTypeRegistry,
+          ruleTypeRegistry,
           kibanaFeatures,
         });
       },
@@ -165,14 +168,14 @@ export class Plugin
 
     return {
       actionTypeRegistry: this.actionTypeRegistry,
-      alertTypeRegistry: this.alertTypeRegistry,
+      ruleTypeRegistry: this.ruleTypeRegistry,
     };
   }
 
   public start(): TriggersAndActionsUIPublicPluginStart {
     return {
       actionTypeRegistry: this.actionTypeRegistry,
-      alertTypeRegistry: this.alertTypeRegistry,
+      ruleTypeRegistry: this.ruleTypeRegistry,
       getAddConnectorFlyout: (props: Omit<ConnectorAddFlyoutProps, 'actionTypeRegistry'>) => {
         return getAddConnectorFlyoutLazy({ ...props, actionTypeRegistry: this.actionTypeRegistry });
       },
@@ -183,21 +186,21 @@ export class Plugin
         });
       },
       getAddAlertFlyout: (
-        props: Omit<AlertAddProps, 'actionTypeRegistry' | 'alertTypeRegistry'>
+        props: Omit<AlertAddProps, 'actionTypeRegistry' | 'ruleTypeRegistry'>
       ) => {
         return getAddAlertFlyoutLazy({
           ...props,
           actionTypeRegistry: this.actionTypeRegistry,
-          alertTypeRegistry: this.alertTypeRegistry,
+          ruleTypeRegistry: this.ruleTypeRegistry,
         });
       },
       getEditAlertFlyout: (
-        props: Omit<AlertEditProps, 'actionTypeRegistry' | 'alertTypeRegistry'>
+        props: Omit<AlertEditProps, 'actionTypeRegistry' | 'ruleTypeRegistry'>
       ) => {
         return getEditAlertFlyoutLazy({
           ...props,
           actionTypeRegistry: this.actionTypeRegistry,
-          alertTypeRegistry: this.alertTypeRegistry,
+          ruleTypeRegistry: this.ruleTypeRegistry,
         });
       },
     };

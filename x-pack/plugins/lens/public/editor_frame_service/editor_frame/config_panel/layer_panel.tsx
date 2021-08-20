@@ -29,6 +29,12 @@ import { EmptyDimensionButton } from './buttons/empty_dimension_button';
 import { DimensionButton } from './buttons/dimension_button';
 import { DraggableDimensionButton } from './buttons/draggable_dimension_button';
 import { useFocusUpdate } from './use_focus_update';
+import {
+  useLensSelector,
+  selectIsFullscreenDatasource,
+  selectResolvedDateRange,
+  selectDatasourceStates,
+} from '../../../state_management';
 
 const initialActiveDimensionState = {
   isNew: false,
@@ -42,6 +48,7 @@ export function LayerPanel(
     isOnlyLayer: boolean;
     updateVisualization: StateSetter<unknown>;
     updateDatasource: (datasourceId: string, newState: unknown) => void;
+    updateDatasourceAsync: (datasourceId: string, newState: unknown) => void;
     updateAll: (
       datasourceId: string,
       newDatasourcestate: unknown,
@@ -49,6 +56,7 @@ export function LayerPanel(
     ) => void;
     onRemoveLayer: () => void;
     registerNewLayerRef: (layerId: string, instance: HTMLDivElement | null) => void;
+    toggleFullscreen: () => void;
   }
 ) {
   const [activeDimension, setActiveDimension] = useState<ActiveDimensionState>(
@@ -65,8 +73,15 @@ export function LayerPanel(
     activeVisualization,
     updateVisualization,
     updateDatasource,
+    toggleFullscreen,
+    updateAll,
+    updateDatasourceAsync,
+    visualizationState,
   } = props;
   const datasourcePublicAPI = framePublicAPI.datasourceLayers[layerId];
+  const dateRange = useLensSelector(selectResolvedDateRange);
+  const datasourceStates = useLensSelector(selectDatasourceStates);
+  const isFullscreen = useLensSelector(selectIsFullscreenDatasource);
 
   useEffect(() => {
     setActiveDimension(initialActiveDimensionState);
@@ -82,12 +97,12 @@ export function LayerPanel(
     layerId,
     state: props.visualizationState,
     frame: props.framePublicAPI,
-    dateRange: props.framePublicAPI.dateRange,
+    dateRange,
     activeData: props.framePublicAPI.activeData,
   };
 
   const datasourceId = datasourcePublicAPI.datasourceId;
-  const layerDatasourceState = props.datasourceStates[datasourceId].state;
+  const layerDatasourceState = datasourceStates[datasourceId].state;
 
   const layerDatasourceDropProps = useMemo(
     () => ({
@@ -105,11 +120,20 @@ export function LayerPanel(
   const layerDatasourceConfigProps = {
     ...layerDatasourceDropProps,
     frame: props.framePublicAPI,
-    dateRange: props.framePublicAPI.dateRange,
     activeData: props.framePublicAPI.activeData,
+    dateRange,
   };
 
-  const { groups } = activeVisualization.getConfiguration(layerVisualizationConfigProps);
+  const { groups, supportStaticValue } = useMemo(
+    () => activeVisualization.getConfiguration(layerVisualizationConfigProps),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      layerVisualizationConfigProps.frame,
+      layerVisualizationConfigProps.state,
+      layerId,
+      activeVisualization,
+    ]
+  );
   const isEmptyLayer = !groups.some((d) => d.accessors.length > 0);
   const { activeId, activeGroup } = activeDimension;
 
@@ -170,6 +194,7 @@ export function LayerPanel(
           layerId: targetLayerId,
           prevState: props.visualizationState,
           previousColumn: typeof droppedItem.column === 'string' ? droppedItem.column : undefined,
+          frame: framePublicAPI,
         });
 
         if (typeof dropResult === 'object') {
@@ -179,6 +204,7 @@ export function LayerPanel(
               columnId: dropResult.deleted,
               layerId: targetLayerId,
               prevState: newVisState,
+              frame: framePublicAPI,
             })
           );
         } else {
@@ -187,6 +213,7 @@ export function LayerPanel(
       }
     };
   }, [
+    framePublicAPI,
     groups,
     layerDatasourceOnDrop,
     props.visualizationState,
@@ -197,63 +224,137 @@ export function LayerPanel(
     setNextFocusedButtonId,
   ]);
 
+  const isDimensionPanelOpen = Boolean(activeId);
+
+  const updateDataLayerState = useCallback(
+    (newState: unknown, { isDimensionComplete = true }: { isDimensionComplete?: boolean } = {}) => {
+      if (!activeGroup || !activeId) {
+        return;
+      }
+      if (allAccessors.includes(activeId)) {
+        if (isDimensionComplete) {
+          updateDatasourceAsync(datasourceId, newState);
+        } else {
+          // The datasource can indicate that the previously-valid column is no longer
+          // complete, which clears the visualization. This keeps the flyout open and reuses
+          // the previous columnId
+          updateAll(
+            datasourceId,
+            newState,
+            activeVisualization.removeDimension({
+              layerId,
+              columnId: activeId,
+              prevState: visualizationState,
+              frame: framePublicAPI,
+            })
+          );
+        }
+      } else if (isDimensionComplete) {
+        updateAll(
+          datasourceId,
+          newState,
+          activeVisualization.setDimension({
+            layerId,
+            groupId: activeGroup.groupId,
+            columnId: activeId,
+            prevState: visualizationState,
+            frame: framePublicAPI,
+          })
+        );
+        setActiveDimension({ ...activeDimension, isNew: false });
+      } else {
+        updateDatasourceAsync(datasourceId, newState);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      activeDimension,
+      activeGroup,
+      activeId,
+      activeVisualization,
+      datasourceId,
+      layerId,
+      updateAll,
+      updateDatasourceAsync,
+      visualizationState,
+      framePublicAPI,
+    ]
+  );
+
   return (
     <>
-      <section tabIndex={-1} ref={registerLayerRef} className="lnsLayerPanel">
-        <EuiPanel data-test-subj={`lns-layerPanel-${layerIndex}`} paddingSize="s">
-          <EuiFlexGroup gutterSize="s" alignItems="flexStart" responsive={false}>
-            <EuiFlexItem grow={false} className="lnsLayerPanel__settingsFlexItem">
-              <LayerSettings
-                layerId={layerId}
-                layerConfigProps={{
-                  ...layerVisualizationConfigProps,
-                  setState: props.updateVisualization,
-                }}
-                activeVisualization={activeVisualization}
-              />
-            </EuiFlexItem>
-
-            {layerDatasource && (
-              <EuiFlexItem className="lnsLayerPanel__sourceFlexItem">
-                <NativeRenderer
-                  render={layerDatasource.renderLayerPanel}
-                  nativeProps={{
-                    layerId,
-                    state: layerDatasourceState,
-                    activeData: props.framePublicAPI.activeData,
-                    setState: (updater: unknown) => {
-                      const newState =
-                        typeof updater === 'function' ? updater(layerDatasourceState) : updater;
-                      // Look for removed columns
-                      const nextPublicAPI = layerDatasource.getPublicAPI({
-                        state: newState,
-                        layerId,
-                      });
-                      const nextTable = new Set(
-                        nextPublicAPI.getTableSpec().map(({ columnId }) => columnId)
-                      );
-                      const removed = datasourcePublicAPI
-                        .getTableSpec()
-                        .map(({ columnId }) => columnId)
-                        .filter((columnId) => !nextTable.has(columnId));
-                      let nextVisState = props.visualizationState;
-                      removed.forEach((columnId) => {
-                        nextVisState = activeVisualization.removeDimension({
-                          layerId,
-                          columnId,
-                          prevState: nextVisState,
-                        });
-                      });
-
-                      props.updateAll(datasourceId, newState, nextVisState);
-                    },
+      <section
+        tabIndex={-1}
+        ref={registerLayerRef}
+        className="lnsLayerPanel"
+        style={{ visibility: isDimensionPanelOpen ? 'hidden' : 'visible' }}
+      >
+        <EuiPanel
+          data-test-subj={`lns-layerPanel-${layerIndex}`}
+          paddingSize="none"
+          hasBorder
+          hasShadow
+        >
+          <section className="lnsLayerPanel__layerHeader">
+            <EuiFlexGroup gutterSize="s" responsive={false} alignItems="center">
+              <EuiFlexItem grow className="lnsLayerPanel__layerSettingsWrapper">
+                <LayerSettings
+                  layerId={layerId}
+                  layerConfigProps={{
+                    ...layerVisualizationConfigProps,
+                    setState: props.updateVisualization,
                   }}
+                  activeVisualization={activeVisualization}
                 />
               </EuiFlexItem>
-            )}
-          </EuiFlexGroup>
+              <EuiFlexItem grow={false}>
+                <RemoveLayerButton
+                  onRemoveLayer={onRemoveLayer}
+                  layerIndex={layerIndex}
+                  isOnlyLayer={isOnlyLayer}
+                  activeVisualization={activeVisualization}
+                />
+              </EuiFlexItem>
+            </EuiFlexGroup>
+            <EuiSpacer size="s" />
+            {layerDatasource && (
+              <NativeRenderer
+                render={layerDatasource.renderLayerPanel}
+                nativeProps={{
+                  layerId,
+                  state: layerDatasourceState,
+                  activeData: props.framePublicAPI.activeData,
+                  setState: (updater: unknown) => {
+                    const newState =
+                      typeof updater === 'function' ? updater(layerDatasourceState) : updater;
+                    // Look for removed columns
+                    const nextPublicAPI = layerDatasource.getPublicAPI({
+                      state: newState,
+                      layerId,
+                    });
+                    const nextTable = new Set(
+                      nextPublicAPI.getTableSpec().map(({ columnId }) => columnId)
+                    );
+                    const removed = datasourcePublicAPI
+                      .getTableSpec()
+                      .map(({ columnId }) => columnId)
+                      .filter((columnId) => !nextTable.has(columnId));
+                    let nextVisState = props.visualizationState;
+                    removed.forEach((columnId) => {
+                      nextVisState = activeVisualization.removeDimension({
+                        layerId,
+                        columnId,
+                        prevState: nextVisState,
+                        frame: framePublicAPI,
+                      });
+                    });
 
-          <EuiSpacer size="m" />
+                    props.updateAll(datasourceId, newState, nextVisState);
+                  },
+                }}
+              />
+            )}
+          </section>
 
           {groups.map((group, groupIndex) => {
             const isMissing = !isEmptyLayer && group.required && group.accessors.length === 0;
@@ -266,7 +367,7 @@ export function LayerPanel(
                 }
                 fullWidth
                 label={
-                  <div className="lnsLayerPanel__groupLabel">
+                  <div>
                     {group.groupLabel}
                     {group.groupTooltip && (
                       <>
@@ -346,6 +447,7 @@ export function LayerPanel(
                                     layerId,
                                     columnId: id,
                                     prevState: props.visualizationState,
+                                    frame: framePublicAPI,
                                   })
                                 );
                                 removeButtonRef(id);
@@ -379,7 +481,7 @@ export function LayerPanel(
                         setActiveDimension({
                           activeGroup: group,
                           activeId: id,
-                          isNew: true,
+                          isNew: !supportStaticValue,
                         });
                       }}
                       onDrop={onDrop}
@@ -389,27 +491,21 @@ export function LayerPanel(
               </EuiFormRow>
             );
           })}
-
-          <EuiSpacer size="m" />
-
-          <EuiFlexGroup justifyContent="center">
-            <EuiFlexItem grow={false}>
-              <RemoveLayerButton
-                onRemoveLayer={onRemoveLayer}
-                layerIndex={layerIndex}
-                isOnlyLayer={isOnlyLayer}
-                activeVisualization={activeVisualization}
-              />
-            </EuiFlexItem>
-          </EuiFlexGroup>
         </EuiPanel>
       </section>
 
       <DimensionContainer
         panelRef={(el) => (panelRef.current = el)}
-        isOpen={!!activeId}
+        isOpen={isDimensionPanelOpen}
+        isFullscreen={isFullscreen}
         groupLabel={activeGroup?.groupLabel || ''}
         handleClose={() => {
+          if (
+            layerDatasource.canCloseDimensionEditor &&
+            !layerDatasource.canCloseDimensionEditor(layerDatasourceState)
+          ) {
+            return false;
+          }
           if (layerDatasource.updateStateOnCloseDimension) {
             const newState = layerDatasource.updateStateOnCloseDimension({
               state: layerDatasourceState,
@@ -421,9 +517,13 @@ export function LayerPanel(
             }
           }
           setActiveDimension(initialActiveDimensionState);
+          if (isFullscreen) {
+            toggleFullscreen();
+          }
+          return true;
         }}
         panel={
-          <>
+          <div>
             {activeGroup && activeId && (
               <NativeRenderer
                 render={layerDatasource.renderDimensionEditor}
@@ -435,46 +535,16 @@ export function LayerPanel(
                   hideGrouping: activeGroup.hideGrouping,
                   filterOperations: activeGroup.filterOperations,
                   dimensionGroups: groups,
-                  setState: (
-                    newState: unknown,
-                    {
-                      shouldReplaceDimension,
-                      shouldRemoveDimension,
-                    }: {
-                      shouldReplaceDimension?: boolean;
-                      shouldRemoveDimension?: boolean;
-                    } = {}
-                  ) => {
-                    if (shouldReplaceDimension || shouldRemoveDimension) {
-                      props.updateAll(
-                        datasourceId,
-                        newState,
-                        shouldRemoveDimension
-                          ? activeVisualization.removeDimension({
-                              layerId,
-                              columnId: activeId,
-                              prevState: props.visualizationState,
-                            })
-                          : activeVisualization.setDimension({
-                              layerId,
-                              groupId: activeGroup.groupId,
-                              columnId: activeId,
-                              prevState: props.visualizationState,
-                            })
-                      );
-                    } else {
-                      props.updateDatasource(datasourceId, newState);
-                    }
-                    setActiveDimension({
-                      ...activeDimension,
-                      isNew: false,
-                    });
-                  },
+                  toggleFullscreen,
+                  isFullscreen,
+                  setState: updateDataLayerState,
+                  layerType: activeVisualization.getLayerType(layerId, visualizationState),
                 }}
               />
             )}
             {activeGroup &&
               activeId &&
+              !isFullscreen &&
               !activeDimension.isNew &&
               activeVisualization.renderDimensionEditor &&
               activeGroup?.enableDimensionEditor && (
@@ -491,7 +561,7 @@ export function LayerPanel(
                   />
                 </div>
               )}
-          </>
+          </div>
         }
       />
     </>

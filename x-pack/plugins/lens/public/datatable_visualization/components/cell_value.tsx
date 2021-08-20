@@ -8,11 +8,11 @@
 import React, { useContext, useEffect } from 'react';
 import { EuiDataGridCellValueElementProps } from '@elastic/eui';
 import { IUiSettingsClient } from 'kibana/public';
-import type { FormatFactory } from '../../types';
+import type { FormatFactory } from '../../../common';
+import { getOriginalId } from '../../../common/expressions';
+import type { ColumnConfig } from '../../../common/expressions';
 import type { DataContextType } from './types';
-import { ColumnConfig } from './table_basic';
-import { getContrastColor } from '../../shared_components/coloring/utils';
-import { getOriginalId } from '../transpose_helpers';
+import { getContrastColor, getNumericValue } from '../../shared_components/coloring/utils';
 
 export const createGridCell = (
   formatters: Record<string, ReturnType<FormatFactory>>,
@@ -37,7 +37,11 @@ export const createGridCell = (
       if (minMaxByColumnId?.[originalId]) {
         if (colorMode !== 'none' && palette?.params && getColorForValue) {
           // workout the bucket the value belongs to
-          const color = getColorForValue(rowValue, palette.params, minMaxByColumnId[originalId]);
+          const color = getColorForValue(
+            getNumericValue(rowValue),
+            palette.params,
+            minMaxByColumnId[originalId]
+          );
           if (color) {
             const style = { [colorMode === 'cell' ? 'backgroundColor' : 'color']: color };
             if (colorMode === 'cell' && color) {

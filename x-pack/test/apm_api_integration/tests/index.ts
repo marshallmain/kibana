@@ -32,6 +32,10 @@ export default function apmApiIntegrationTests(providerContext: FtrProviderConte
       loadTestFile(require.resolve('./correlations/latency_slow_transactions'));
     });
 
+    describe('correlations/latency_ml', function () {
+      loadTestFile(require.resolve('./correlations/latency_ml'));
+    });
+
     describe('correlations/latency_overall', function () {
       loadTestFile(require.resolve('./correlations/latency_overall'));
     });
@@ -78,12 +82,13 @@ export default function apmApiIntegrationTests(providerContext: FtrProviderConte
     });
 
     // Services
-    describe('services/agent_name', function () {
-      loadTestFile(require.resolve('./services/agent_name'));
+    describe('services/agent', function () {
+      loadTestFile(require.resolve('./services/agent'));
     });
 
     describe('services/annotations', function () {
       loadTestFile(require.resolve('./services/annotations'));
+      loadTestFile(require.resolve('./services/derived_annotations'));
     });
 
     describe('services/service_details', function () {
@@ -112,6 +117,10 @@ export default function apmApiIntegrationTests(providerContext: FtrProviderConte
 
     describe('services/error_groups_detailed_statistics', function () {
       loadTestFile(require.resolve('./services/error_groups_detailed_statistics'));
+    });
+
+    describe('services/detailed_statistics', function () {
+      loadTestFile(require.resolve('./services/services_detailed_statistics'));
     });
 
     // Settinges
@@ -149,8 +158,8 @@ export default function apmApiIntegrationTests(providerContext: FtrProviderConte
       loadTestFile(require.resolve('./transactions/breakdown'));
     });
 
-    describe('transactions/distribution', function () {
-      loadTestFile(require.resolve('./transactions/distribution'));
+    describe('transactions/trace_samples', function () {
+      loadTestFile(require.resolve('./transactions/trace_samples'));
     });
 
     describe('transactions/error_rate', function () {
@@ -159,14 +168,6 @@ export default function apmApiIntegrationTests(providerContext: FtrProviderConte
 
     describe('transactions/latency', function () {
       loadTestFile(require.resolve('./transactions/latency'));
-    });
-
-    describe('transactions/throughput', function () {
-      loadTestFile(require.resolve('./transactions/throughput'));
-    });
-
-    describe('transactions/top_transaction_groups', function () {
-      loadTestFile(require.resolve('./transactions/top_transaction_groups'));
     });
 
     describe('transactions/transactions_groups_main_statistics', function () {

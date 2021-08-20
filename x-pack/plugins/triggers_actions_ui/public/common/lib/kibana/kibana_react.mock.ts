@@ -8,22 +8,22 @@
 import React from 'react';
 import { chartPluginMock } from '../../../../../../../src/plugins/charts/public/mocks';
 import { dataPluginMock } from '../../../../../../../src/plugins/data/public/mocks';
-
+import { spacesOssPluginMock } from '../../../../../../../src/plugins/spaces_oss/public/mocks';
 import { coreMock, scopedHistoryMock } from '../../../../../../../src/core/public/mocks';
 import { KibanaContextProvider } from '../../../../../../../src/plugins/kibana_react/public';
 import { TriggersAndActionsUiServices } from '../../../application/app';
-import { AlertTypeRegistryContract, ActionTypeRegistryContract } from '../../../types';
+import { RuleTypeRegistryContract, ActionTypeRegistryContract } from '../../../types';
 
 export const createStartServicesMock = (): TriggersAndActionsUiServices => {
   const core = coreMock.createStart();
   return {
     ...core,
-    alertTypeRegistry: {
+    ruleTypeRegistry: {
       has: jest.fn(),
       register: jest.fn(),
       get: jest.fn(),
       list: jest.fn(),
-    } as AlertTypeRegistryContract,
+    } as RuleTypeRegistryContract,
     dataPlugin: jest.fn(),
     navigateToApp: jest.fn(),
     alerting: {
@@ -45,6 +45,7 @@ export const createStartServicesMock = (): TriggersAndActionsUiServices => {
     element: ({
       style: { cursor: 'pointer' },
     } as unknown) as HTMLElement,
+    spacesOss: spacesOssPluginMock.createStartContract(),
   } as TriggersAndActionsUiServices;
 };
 

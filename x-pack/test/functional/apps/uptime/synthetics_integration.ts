@@ -92,7 +92,8 @@ export default function ({ getPageObjects, getService }: FtrProviderContext) {
       host,
     });
 
-    describe('displays custom UI', () => {
+    // FLAKY: https://github.com/elastic/kibana/issues/109260
+    describe.skip('displays custom UI', () => {
       before(async () => {
         const version = await uptimeService.syntheticsPackage.getSyntheticsPackageVersion();
         await uptimePage.syntheticsIntegration.navigateToPackagePage(version!);
@@ -110,7 +111,8 @@ export default function ({ getPageObjects, getService }: FtrProviderContext) {
       });
     });
 
-    describe('create new policy', () => {
+    // FLAKY: https://github.com/elastic/kibana/issues/109329
+    describe.skip('create new policy', () => {
       let version: string;
       before(async () => {
         await uptimeService.syntheticsPackage.deletePolicyByName('system-1');
@@ -277,7 +279,7 @@ export default function ({ getPageObjects, getService }: FtrProviderContext) {
           },
           requestBody: {
             type: 'xml',
-            value: '<samplexml>samplexml',
+            value: '<samplexml>samplexml<samplexml>',
           },
           indexResponseBody: false,
           indexResponseHeaders: false,
@@ -308,7 +310,7 @@ export default function ({ getPageObjects, getService }: FtrProviderContext) {
               },
               'check.response.headers': advancedConfig.responseHeaders,
               'check.response.status': [advancedConfig.responseStatusCheck],
-              'check.request.body': `${advancedConfig.requestBody.value}</samplexml>`, // code editor adds closing tag
+              'check.request.body': advancedConfig.requestBody.value,
               'check.response.body.positive': [advancedConfig.responseBodyCheckPositive],
               'check.response.body.negative': [advancedConfig.responseBodyCheckNegative],
               'response.include_body': advancedConfig.indexResponseBody ? 'on_error' : 'never',

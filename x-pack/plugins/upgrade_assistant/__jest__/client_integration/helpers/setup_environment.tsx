@@ -14,14 +14,20 @@ import {
   deprecationsServiceMock,
   docLinksServiceMock,
   notificationServiceMock,
+  applicationServiceMock,
 } from 'src/core/public/mocks';
 import { HttpSetup } from 'src/core/public';
 
-import { mockKibanaSemverVersion, UA_READONLY_MODE } from '../../../common/constants';
+import { KibanaContextProvider } from '../../../public/shared_imports';
+import { mockKibanaSemverVersion } from '../../../common/constants';
 import { AppContextProvider } from '../../../public/application/app_context';
 import { apiService } from '../../../public/application/lib/api';
 import { breadcrumbService } from '../../../public/application/lib/breadcrumbs';
+import { GlobalFlyout } from '../../../public/shared_imports';
+import { servicesMock } from './services_mock';
 import { init as initHttpRequests } from './http_requests';
+
+const { GlobalFlyoutProvider } = GlobalFlyout;
 
 const mockHttpClient = axios.create({ adapter: axiosXhrAdapter });
 
@@ -33,25 +39,30 @@ export const WithAppDependencies = (Comp: any, overrides: Record<string, unknown
 
   const contextValue = {
     http: (mockHttpClient as unknown) as HttpSetup,
-    isCloudEnabled: false,
     docLinks: docLinksServiceMock.createStartContract(),
     kibanaVersionInfo: {
       currentMajor: mockKibanaSemverVersion.major,
       prevMajor: mockKibanaSemverVersion.major - 1,
       nextMajor: mockKibanaSemverVersion.major + 1,
     },
-    isReadOnlyMode: UA_READONLY_MODE,
     notifications: notificationServiceMock.createStartContract(),
+    isReadOnlyMode: false,
     api: apiService,
     breadcrumbs: breadcrumbService,
-    getUrlForApp: () => '',
+    getUrlForApp: applicationServiceMock.createStartContract().getUrlForApp,
     deprecations: deprecationsServiceMock.createStartContract(),
   };
 
+  const { servicesOverrides, ...contextOverrides } = overrides;
+
   return (
-    <AppContextProvider value={{ ...contextValue, ...overrides }}>
-      <Comp {...props} />
-    </AppContextProvider>
+    <KibanaContextProvider services={{ ...servicesMock, ...(servicesOverrides as {}) }}>
+      <AppContextProvider value={{ ...contextValue, ...contextOverrides }}>
+        <GlobalFlyoutProvider>
+          <Comp {...props} />
+        </GlobalFlyoutProvider>
+      </AppContextProvider>
+    </KibanaContextProvider>
   );
 };
 

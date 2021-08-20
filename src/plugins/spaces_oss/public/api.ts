@@ -100,7 +100,7 @@ export interface SpacesApiUiComponent {
    * that there is a conflict, and it includes a button that will redirect the user to object B when clicked.
    *
    * Consumers need to determine the local path for the new URL on their own, based on the object ID that was used to call
-   * `SavedObjectsClient.resolve()` (A) and the `aliasTargetId` value in the response (B). For example...
+   * `SavedObjectsClient.resolve()` (A) and the `alias_target_id` value in the response (B). For example...
    *
    * A is `workpad-123` and B is `workpad-e08b9bdb-ec14-4339-94c4-063bddfd610e`.
    *
@@ -168,15 +168,19 @@ export interface ShareToSpaceFlyoutProps {
    */
   behaviorContext?: 'within-space' | 'outside-space';
   /**
-   * Optional handler that is called when the user has saved changes and there are spaces to be added to and/or removed from the object. If
-   * this is not defined, a default handler will be used that calls `/api/spaces/_update_objects_spaces` and displays a toast indicating
-   * what occurred.
+   * Optional handler that is called when the user has saved changes and there are spaces to be added to and/or removed from the object and
+   * its relatives. If this is not defined, a default handler will be used that calls `/api/spaces/_update_objects_spaces` and displays a
+   * toast indicating what occurred.
    */
-  changeSpacesHandler?: (spacesToAdd: string[], spacesToRemove: string[]) => Promise<void>;
+  changeSpacesHandler?: (
+    objects: Array<{ type: string; id: string }>,
+    spacesToAdd: string[],
+    spacesToRemove: string[]
+  ) => Promise<void>;
   /**
-   * Optional callback when the target object is updated.
+   * Optional callback when the target object and its relatives are updated.
    */
-  onUpdate?: () => void;
+  onUpdate?: (updatedObjects: Array<{ type: string; id: string }>) => void;
   /**
    * Optional callback when the flyout is closed.
    */
@@ -288,4 +292,11 @@ export interface SpaceAvatarProps {
    * Default value is true.
    */
   announceSpaceName?: boolean;
+
+  /**
+   * Whether or not to render the avatar in a disabled state.
+   *
+   * Default value is false.
+   */
+  isDisabled?: boolean;
 }

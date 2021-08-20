@@ -9,13 +9,9 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { FormattedMessage } from '@kbn/i18n/react';
-import { EuiFlexGroup, EuiFlexItem, EuiHorizontalRule } from '@elastic/eui';
 import { METRIC_TYPE } from '@kbn/analytics';
 import { i18n } from '@kbn/i18n';
-import {
-  OverviewPageFooter,
-  OverviewPageHeader,
-} from '../../../../../../src/plugins/kibana_react/public';
+import { KibanaPageTemplate, OverviewPageFooter } from '../../../../kibana_react/public';
 import { HOME_APP_BASE_PATH } from '../../../common/constants';
 import { FeatureCatalogueCategory } from '../../services';
 import { getServices } from '../kibana_services';
@@ -74,15 +70,9 @@ export class Home extends Component {
         }
       }, 500);
 
-      const resp = await this.props.find({
-        type: 'index-pattern',
-        fields: ['title'],
-        search: `*`,
-        search_fields: ['title'],
-        perPage: 1,
-      });
+      const { isNewInstance } = await this.props.http.get('/internal/home/new_instance_status');
 
-      this.endLoading({ isNewKibanaInstance: resp.total === 0 });
+      this.endLoading({ isNewKibanaInstance: isNewInstance });
     } catch (err) {
       // An error here is relatively unimportant, as it only means we don't provide
       // some UI niceties.
@@ -112,10 +102,10 @@ export class Home extends Component {
       .sort((directoryA, directoryB) => directoryA.order - directoryB.order);
 
   renderNormal() {
-    const { addBasePath, solutions, directories } = this.props;
-    const { trackUiMetric } = getServices();
+    const { addBasePath, solutions } = this.props;
+    const { application, trackUiMetric } = getServices();
+    const isDarkMode = getServices().uiSettings?.get('theme:darkMode') || false;
     const devTools = this.findDirectoryById('console');
-    const addDataFeatures = this.getFeaturesByCategory(FeatureCatalogueCategory.DATA);
     const manageDataFeatures = this.getFeaturesByCategory(FeatureCatalogueCategory.ADMIN);
 
     // Show card for console if none of the manage data plugins are available, most likely in OSS
@@ -124,58 +114,35 @@ export class Home extends Component {
     }
 
     return (
-      <main
-        aria-labelledby="kbnOverviewPageHeader__title"
-        className="homWrapper"
+      <KibanaPageTemplate
         data-test-subj="homeApp"
+        pageHeader={{
+          bottomBorder: false,
+          pageTitle: <FormattedMessage id="home.header.title" defaultMessage="Welcome home" />,
+        }}
+        template="empty"
       >
-        <OverviewPageHeader
+        <SolutionsSection addBasePath={addBasePath} solutions={solutions} />
+
+        <AddData addBasePath={addBasePath} application={application} isDarkMode={isDarkMode} />
+
+        <ManageData
           addBasePath={addBasePath}
-          overlap={solutions.length}
-          showDevToolsLink
-          showManagementLink
-          title={<FormattedMessage id="home.header.title" defaultMessage="Home" />}
+          application={application}
+          features={manageDataFeatures}
         />
 
-        <div className="homContent">
-          {solutions.length ? (
-            <SolutionsSection
-              addBasePath={addBasePath}
-              solutions={solutions}
-              directories={directories}
-            />
-          ) : null}
-
-          <EuiFlexGroup
-            className={`homData ${
-              addDataFeatures.length === 1 && manageDataFeatures.length === 1
-                ? 'homData--compressed'
-                : 'homData--expanded'
-            }`}
-          >
-            <EuiFlexItem>
-              <AddData addBasePath={addBasePath} features={addDataFeatures} />
-            </EuiFlexItem>
-
-            <EuiFlexItem>
-              <ManageData addBasePath={addBasePath} features={manageDataFeatures} />
-            </EuiFlexItem>
-          </EuiFlexGroup>
-
-          <EuiHorizontalRule margin="xl" aria-hidden="true" />
-
-          <OverviewPageFooter
-            addBasePath={addBasePath}
-            path={HOME_APP_BASE_PATH}
-            onSetDefaultRoute={() => {
-              trackUiMetric(METRIC_TYPE.CLICK, 'set_home_as_default_route');
-            }}
-            onChangeDefaultRoute={() => {
-              trackUiMetric(METRIC_TYPE.CLICK, 'change_to_different_default_route');
-            }}
-          />
-        </div>
-      </main>
+        <OverviewPageFooter
+          addBasePath={addBasePath}
+          path={HOME_APP_BASE_PATH}
+          onSetDefaultRoute={() => {
+            trackUiMetric(METRIC_TYPE.CLICK, 'set_home_as_default_route');
+          }}
+          onChangeDefaultRoute={() => {
+            trackUiMetric(METRIC_TYPE.CLICK, 'change_to_different_default_route');
+          }}
+        />
+      </KibanaPageTemplate>
     );
   }
 
@@ -184,6 +151,7 @@ export class Home extends Component {
   renderLoading() {
     return '';
   }
+
   renderWelcome() {
     return (
       <Welcome
@@ -212,27 +180,11 @@ export class Home extends Component {
 
 Home.propTypes = {
   addBasePath: PropTypes.func.isRequired,
-  directories: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      title: PropTypes.string.isRequired,
-      subtitle: PropTypes.string,
-      description: PropTypes.string.isRequired,
-      icon: PropTypes.string.isRequired,
-      path: PropTypes.string.isRequired,
-      showOnHomePage: PropTypes.bool.isRequired,
-      category: PropTypes.string.isRequired,
-      order: PropTypes.number,
-      solutionId: PropTypes.string,
-    })
-  ),
   solutions: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       title: PropTypes.string.isRequired,
-      subtitle: PropTypes.string.isRequired,
       description: PropTypes.string,
-      appDescriptions: PropTypes.arrayOf(PropTypes.string).isRequired,
       icon: PropTypes.string.isRequired,
       path: PropTypes.string.isRequired,
       order: PropTypes.number,

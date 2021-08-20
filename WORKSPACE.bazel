@@ -10,15 +10,15 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # Fetch Node.js rules
 http_archive(
   name = "build_bazel_rules_nodejs",
-  sha256 = "10f534e1c80f795cffe1f2822becd4897754d18564612510c59b3c73544ae7c6",
-  urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/3.5.0/rules_nodejs-3.5.0.tar.gz"],
+  sha256 = "e79c08a488cc5ac40981987d862c7320cee8741122a2649e9b08e850b6f20442",
+  urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/3.8.0/rules_nodejs-3.8.0.tar.gz"],
 )
 
 # Now that we have the rules let's import from them to complete the work
 load("@build_bazel_rules_nodejs//:index.bzl", "check_rules_nodejs_version", "node_repositories", "yarn_install")
 
 # Assure we have at least a given rules_nodejs version
-check_rules_nodejs_version(minimum_version_string = "3.5.0")
+check_rules_nodejs_version(minimum_version_string = "3.8.0")
 
 # Setup the Node.js toolchain for the architectures we want to support
 #
@@ -27,13 +27,13 @@ check_rules_nodejs_version(minimum_version_string = "3.5.0")
 # we can update that rule.
 node_repositories(
   node_repositories = {
-    "14.17.0-darwin_amd64": ("node-v14.17.0-darwin-x64.tar.gz", "node-v14.17.0-darwin-x64", "7b210652e11d1ee25650c164cf32381895e1dcb3e0ff1d0841d8abc1f47ac73e"),
-    "14.17.0-linux_arm64": ("node-v14.17.0-linux-arm64.tar.xz", "node-v14.17.0-linux-arm64", "712e5575cee20570a0a56f4d4b4572cb0f2ee2f4bce49433de18be0393e7df22"),
-    "14.17.0-linux_s390x": ("node-v14.17.0-linux-s390x.tar.xz", "node-v14.17.0-linux-s390x", "6419372b9e9ad37e0bce188dc5740f2f060aaa44454418e462b4088a310a1c0b"),
-    "14.17.0-linux_amd64": ("node-v14.17.0-linux-x64.tar.xz", "node-v14.17.0-linux-x64", "494b161759a3d19c70e3172d33ce1918dd8df9ad20d29d1652a8387a84e2d308"),
-    "14.17.0-windows_amd64": ("node-v14.17.0-win-x64.zip", "node-v14.17.0-win-x64", "6582a7259c433e9f667dcc4ed3e5d68bc514caba2eed40e4626c8b4c7e5ecd5c"),
+    "14.17.5-darwin_amd64": ("node-v14.17.5-darwin-x64.tar.gz", "node-v14.17.5-darwin-x64", "2e40ab625b45b9bdfcb963ddd4d65d87ddf1dd37a86b6f8b075cf3d77fe9dc09"),
+    "14.17.5-linux_arm64": ("node-v14.17.5-linux-arm64.tar.xz", "node-v14.17.5-linux-arm64", "3a2e674b6db50dfde767c427e8f077235bbf6f9236e1b12a4cc3496b12f94bae"),
+    "14.17.5-linux_s390x": ("node-v14.17.5-linux-s390x.tar.xz", "node-v14.17.5-linux-s390x", "7d40eee3d54241403db12fb3bc420cd776e2b02e89100c45cf5e74a73942e7f6"),
+    "14.17.5-linux_amd64": ("node-v14.17.5-linux-x64.tar.xz", "node-v14.17.5-linux-x64", "2d759de07a50cd7f75bd73d67e97b0d0e095ee3c413efac7d1b3d1e84ed76fff"),
+    "14.17.5-windows_amd64": ("node-v14.17.5-win-x64.zip", "node-v14.17.5-win-x64", "a99b7ee08e846e5d1f4e70c4396265542819d79ed9cebcc27760b89571f03cbf"),
   },
-  node_version = "14.17.0",
+  node_version = "14.17.5",
   node_urls = [
     "https://nodejs.org/dist/v{version}/{filename}",
   ],
@@ -59,6 +59,7 @@ yarn_install(
     "//:preinstall_check.js",
     "//:node_modules/.yarn-integrity",
   ],
+  exports_directories_only = True,
   symlink_node_modules = True,
   quiet = False,
   frozen_lockfile = False,

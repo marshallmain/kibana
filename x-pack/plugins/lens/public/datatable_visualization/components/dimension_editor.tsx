@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { i18n } from '@kbn/i18n';
 import {
   EuiFormRow,
@@ -16,25 +16,37 @@ import {
   EuiFlexItem,
   EuiFlexGroup,
   EuiButtonEmpty,
+  EuiFieldText,
+  EuiComboBox,
 } from '@elastic/eui';
 import { PaletteRegistry } from 'src/plugins/charts/public';
 import { VisualizationDimensionEditorProps } from '../../types';
 import { DatatableVisualizationState } from '../visualization';
-import { getOriginalId } from '../transpose_helpers';
 import {
   CustomizablePalette,
   applyPaletteParams,
   defaultPaletteParams,
   FIXED_PROGRESSION,
   getStopsForFixedMode,
+  useDebouncedValue,
+  PalettePanelContainer,
+  findMinMaxByColumnId,
 } from '../../shared_components/';
-import { PalettePanelContainer } from './palette_panel_container';
-import { findMinMaxByColumnId } from './shared_utils';
+import type { ColumnState } from '../../../common/expressions';
+import {
+  isNumericFieldForDatatable,
+  getDefaultSummaryLabel,
+  getFinalSummaryConfiguration,
+  getSummaryRowOptions,
+  getOriginalId,
+} from '../../../common/expressions';
+
 import './dimension_editor.scss';
 
 const idPrefix = htmlIdGenerator()();
 
 type ColumnType = DatatableVisualizationState['columns'][number];
+type SummaryRowType = Extract<ColumnState['summaryRow'], string>;
 
 function updateColumnWith(
   state: DatatableVisualizationState,
@@ -58,6 +70,24 @@ export function TableDimensionEditor(
   const { state, setState, frame, accessor } = props;
   const column = state.columns.find(({ columnId }) => accessor === columnId);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const onSummaryLabelChangeToDebounce = useCallback(
+    (newSummaryLabel: string | undefined) => {
+      setState({
+        ...state,
+        columns: updateColumnWith(state, accessor, { summaryLabel: newSummaryLabel }),
+      });
+    },
+    [accessor, setState, state]
+  );
+  const { inputValue: summaryLabel, handleInputChange: onSummaryLabelChange } = useDebouncedValue<
+    string | undefined
+  >(
+    {
+      onChange: onSummaryLabelChangeToDebounce,
+      value: column?.summaryLabel,
+    },
+    { allowFalsyValue: true } // falsy values are valid for this feature
+  );
 
   if (!column) return null;
   if (column.isTransposed) return null;
@@ -65,13 +95,21 @@ export function TableDimensionEditor(
   const currentData = frame.activeData?.[state.layerId];
 
   // either read config state or use same logic as chart itself
-  const isNumericField =
-    currentData?.columns.find((col) => col.id === accessor || getOriginalId(col.id) === accessor)
-      ?.meta.type === 'number';
-
-  const currentAlignment = column?.alignment || (isNumericField ? 'right' : 'left');
+  const isNumeric = isNumericFieldForDatatable(currentData, accessor);
+  const currentAlignment = column?.alignment || (isNumeric ? 'right' : 'left');
   const currentColorMode = column?.colorMode || 'none';
   const hasDynamicColoring = currentColorMode !== 'none';
+  // when switching from one operation to another, make sure to keep the configuration consistent
+  const { summaryRow, summaryLabel: fallbackSummaryLabel } = getFinalSummaryConfiguration(
+    accessor,
+    column,
+    currentData
+  );
+
+  const datasource = frame.datasourceLayers[state.layerId];
+  const showDynamicColoringFeature = Boolean(
+    isNumeric && !datasource?.getOperationForColumnId(accessor)?.isBucketed
+  );
 
   const visibleColumnsCount = state.columns.filter((c) => !c.hidden).length;
 
@@ -80,7 +118,7 @@ export function TableDimensionEditor(
     ? currentData?.columns.filter(({ id }) => getOriginalId(id) === accessor).map(({ id }) => id) ||
       []
     : [accessor];
-  const minMaxByColumnId = findMinMaxByColumnId(columnsToCheck, currentData);
+  const minMaxByColumnId = findMinMaxByColumnId(columnsToCheck, currentData, getOriginalId);
   const currentMinMax = minMaxByColumnId[accessor];
 
   const activePalette = column?.palette || {
@@ -175,7 +213,61 @@ export function TableDimensionEditor(
           />
         </EuiFormRow>
       )}
-      {isNumericField && (
+      {isNumeric && (
+        <>
+          <EuiFormRow
+            fullWidth
+            label={i18n.translate('xpack.lens.table.summaryRow.label', {
+              defaultMessage: 'Summary Row',
+            })}
+            display="columnCompressed"
+          >
+            <EuiComboBox
+              fullWidth
+              compressed
+              isClearable={false}
+              data-test-subj="lnsDatatable_summaryrow_function"
+              placeholder={i18n.translate('xpack.lens.indexPattern.fieldPlaceholder', {
+                defaultMessage: 'Field',
+              })}
+              options={getSummaryRowOptions()}
+              selectedOptions={[
+                {
+                  label: getDefaultSummaryLabel(summaryRow),
+                  value: summaryRow,
+                },
+              ]}
+              singleSelection={{ asPlainText: true }}
+              onChange={(choices) => {
+                const newValue = choices[0].value as SummaryRowType;
+                setState({
+                  ...state,
+                  columns: updateColumnWith(state, accessor, { summaryRow: newValue }),
+                });
+              }}
+            />
+          </EuiFormRow>
+          {summaryRow !== 'none' && (
+            <EuiFormRow
+              display="columnCompressed"
+              fullWidth
+              label={i18n.translate('xpack.lens.table.summaryRow.customlabel', {
+                defaultMessage: 'Summary label',
+              })}
+            >
+              <EuiFieldText
+                compressed
+                data-test-subj="lnsDatatable_summaryrow_label"
+                value={summaryLabel ?? fallbackSummaryLabel}
+                onChange={(e) => {
+                  onSummaryLabelChange(e.target.value);
+                }}
+              />
+            </EuiFormRow>
+          )}
+        </>
+      )}
+      {showDynamicColoringFeature && (
         <>
           <EuiFormRow
             display="columnCompressed"

@@ -6,7 +6,6 @@
  */
 
 import React, { createContext } from 'react';
-import { useParams } from 'react-router-dom';
 import { Annotation } from '../../../common/annotations';
 import { useFetcher } from '../../hooks/use_fetcher';
 import { useUrlParams } from '../url_params_context/use_url_params';
@@ -19,12 +18,15 @@ const INITIAL_STATE = { annotations: [] };
 
 export function AnnotationsContextProvider({
   children,
+  environment,
+  serviceName,
 }: {
   children: React.ReactNode;
+  environment: string;
+  serviceName?: string;
 }) {
-  const { serviceName } = useParams<{ serviceName?: string }>();
   const {
-    urlParams: { environment, start, end },
+    urlParams: { start, end },
   } = useUrlParams();
 
   const { data = INITIAL_STATE } = useFetcher(
