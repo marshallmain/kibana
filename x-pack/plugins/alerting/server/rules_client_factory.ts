@@ -98,7 +98,7 @@ export class RulesClientFactory {
         const user = await securityPluginStart.authc.getCurrentUser(request);
         return user ? user.username : null;
       },
-      async createAPIKey(name: string) {
+      async createAPIKey(name: string, roleDescriptors?: Record<string, unknown>) {
         if (!securityPluginStart) {
           return { apiKeysEnabled: false };
         }
@@ -107,7 +107,7 @@ export class RulesClientFactory {
         // privileges
         const createAPIKeyResult = await securityPluginStart.authc.apiKeys.grantAsInternalUser(
           request,
-          { name, role_descriptors: {} }
+          { name, role_descriptors: roleDescriptors ?? {} }
         );
         if (!createAPIKeyResult) {
           return { apiKeysEnabled: false };

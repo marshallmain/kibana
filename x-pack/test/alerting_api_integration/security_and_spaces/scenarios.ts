@@ -182,6 +182,7 @@ export const Spaces: Space[] = [Space1, Space2, OtherSpace];
 interface Scenario {
   user: User;
   space: Space;
+  roleDescriptors?: Record<string, unknown>;
 }
 
 interface NoKibanaPrivilegesAtSpace1 extends Scenario {
@@ -200,6 +201,25 @@ const SuperuserAtSpace1: SuperuserAtSpace1 = {
   id: 'superuser at space1',
   user: Superuser,
   space: Space1,
+};
+
+interface SuperuserAtSpace1WithRestrictedRole extends Scenario {
+  id: 'superuser at space1 with restricted role';
+}
+export const SuperuserAtSpace1WithRestrictedRole: SuperuserAtSpace1WithRestrictedRole = {
+  id: 'superuser at space1 with restricted role',
+  user: Superuser,
+  space: Space1,
+  roleDescriptors: {
+    role: {
+      index: [
+        {
+          names: [`${ES_TEST_INDEX_NAME}*`],
+          privileges: ['read'],
+        },
+      ],
+    },
+  },
 };
 
 interface GlobalReadAtSpace1 extends Scenario {

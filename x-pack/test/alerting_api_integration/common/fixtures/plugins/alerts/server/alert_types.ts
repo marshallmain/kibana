@@ -366,6 +366,56 @@ function getAuthorizationAlertType(core: CoreSetup<FixtureStartDeps>) {
   return result;
 }
 
+function getSearchAndCopyAlertType() {
+  const paramsSchema = schema.object({
+    index: schema.string(),
+    writeIndex: schema.string(),
+    reference: schema.string(),
+  });
+  type ParamsType = TypeOf<typeof paramsSchema>;
+  const result: AlertType<ParamsType, never, {}, {}, {}, 'default'> = {
+    id: 'test.searchAndCopy',
+    name: 'Test: Search And Copy',
+    actionGroups: [
+      {
+        id: 'default',
+        name: 'Default',
+      },
+    ],
+    defaultActionGroupId: 'default',
+    producer: 'alertsFixture',
+    minimumLicenseRequired: 'basic',
+    isExportable: true,
+    validate: {
+      params: paramsSchema,
+    },
+    async executor({ services, params, state }) {
+      const { body: searchResult } = await services.scopedClusterClient.asCurrentUser.search({
+        index: params.index,
+        body: { query: { match_all: {} } },
+      });
+      const bulkRequestBody = searchResult.hits.hits.flatMap((hit) => {
+        return [
+          {
+            create: {
+              _index: params.writeIndex,
+            },
+          },
+          {
+            ...(hit._source as object),
+            source: 'alert:test.searchAndCopy',
+            reference: params.reference,
+          },
+        ];
+      });
+      await services.scopedClusterClient.asCurrentUser.bulk({
+        body: bulkRequestBody,
+      });
+    },
+  };
+  return result;
+}
+
 function getValidationAlertType() {
   const paramsSchema = schema.object({
     param1: schema.string(),
@@ -579,4 +629,5 @@ export function defineAlertTypes(
   alerting.registerType(longRunningAlertType);
   alerting.registerType(goldNoopAlertType);
   alerting.registerType(exampleAlwaysFiringAlertType);
+  alerting.registerType(getSearchAndCopyAlertType());
 }

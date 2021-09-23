@@ -7,7 +7,13 @@
 
 export { ObjectRemover } from './object_remover';
 export { getUrlPrefix } from './space_test_utils';
-export { ES_TEST_INDEX_NAME, ESTestIndexTool } from './es_test_index_tool';
+export {
+  ES_TEST_INDEX_NAME,
+  ES_READ_INDEX_1,
+  ES_READ_INDEX_2,
+  ES_READ_INDEX_PATTERN,
+  ESTestIndexTool,
+} from './es_test_index_tool';
 export { getTestAlertData } from './get_test_alert_data';
 export {
   AlertUtils,

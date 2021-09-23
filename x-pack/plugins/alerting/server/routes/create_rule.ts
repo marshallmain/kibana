@@ -44,16 +44,19 @@ export const bodySchema = schema.object({
     { defaultValue: [] }
   ),
   notify_when: schema.string({ validate: validateNotifyWhenType }),
+  role_descriptors: schema.maybe(schema.recordOf(schema.string(), schema.any())),
 });
 
 const rewriteBodyReq: RewriteRequestCase<CreateOptions<AlertTypeParams>['data']> = ({
   rule_type_id: alertTypeId,
   notify_when: notifyWhen,
+  role_descriptors: roleDescriptors,
   ...rest
 }) => ({
   ...rest,
   alertTypeId,
   notifyWhen,
+  roleDescriptors,
 });
 const rewriteBodyRes: RewriteResponseCase<SanitizedAlert<AlertTypeParams>> = ({
   actions,
@@ -68,6 +71,7 @@ const rewriteBodyRes: RewriteResponseCase<SanitizedAlert<AlertTypeParams>> = ({
   muteAll,
   mutedInstanceIds,
   executionStatus: { lastExecutionDate, ...executionStatus },
+  roleDescriptors,
   ...rest
 }) => ({
   ...rest,
@@ -91,6 +95,7 @@ const rewriteBodyRes: RewriteResponseCase<SanitizedAlert<AlertTypeParams>> = ({
     params,
     connector_type_id: actionTypeId,
   })),
+  role_descriptors: roleDescriptors,
 });
 
 export const createRuleRoute = ({ router, licenseState, usageCounter }: RouteOptions) => {

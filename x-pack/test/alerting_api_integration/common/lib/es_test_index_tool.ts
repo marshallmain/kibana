@@ -6,6 +6,9 @@
  */
 
 export const ES_TEST_INDEX_NAME = '.kibana-alerting-test-data';
+export const ES_READ_INDEX_1 = '.read_index_1';
+export const ES_READ_INDEX_2 = '.read_index_2';
+export const ES_READ_INDEX_PATTERN = '.read_index*';
 
 export class ESTestIndexTool {
   constructor(

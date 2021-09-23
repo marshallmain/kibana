@@ -112,6 +112,10 @@
             }
           }
         }
+      },
+      "roleDescriptors": {
+        "type": "object",
+        "enabled": false
       }
     }
   }

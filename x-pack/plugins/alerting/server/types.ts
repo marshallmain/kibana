@@ -230,6 +230,7 @@ export interface RawAlert extends SavedObjectAttributes {
   mutedInstanceIds: string[];
   meta?: AlertMeta;
   executionStatus: RawAlertExecutionStatus;
+  roleDescriptors?: SavedObjectAttributes;
 }
 
 export type AlertInfoParams = Pick<

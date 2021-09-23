@@ -13,6 +13,9 @@ import { FtrProviderContext } from '../../../common/ftr_provider_context';
 import {
   ESTestIndexTool,
   ES_TEST_INDEX_NAME,
+  ES_READ_INDEX_1,
+  ES_READ_INDEX_2,
+  ES_READ_INDEX_PATTERN,
   getUrlPrefix,
   getTestAlertData,
   ObjectRemover,
@@ -52,6 +55,122 @@ export default function alertTests({ getService }: FtrProviderContext) {
     after(async () => {
       await esTestIndexTool.destroy();
       await es.indices.delete({ index: authorizationIndex });
+    });
+
+    describe('role_descriptors_POC', () => {
+      let alertUtils: AlertUtils;
+      const scenario = UserAtSpaceScenarios[1];
+      const { user, space } = scenario;
+
+      before(async () => {
+        await es.indices.create({ index: ES_READ_INDEX_1 });
+        await es.indices.create({ index: ES_READ_INDEX_2 });
+
+        await es.index({ index: ES_READ_INDEX_1, body: { indexName: ES_READ_INDEX_1 } });
+        await es.index({ index: ES_READ_INDEX_2, body: { indexName: ES_READ_INDEX_2 } });
+        alertUtils = new AlertUtils({
+          user,
+          space,
+          supertestWithoutAuth,
+          indexRecordActionId: 'fake id',
+          objectRemover,
+        });
+      });
+
+      after(async () => {
+        await es.indices.delete({ index: ES_READ_INDEX_1 });
+        await es.indices.delete({ index: ES_READ_INDEX_2 });
+      });
+
+      const roleDescriptorScenarios = [
+        {
+          id: 'no limitations',
+          roleDescriptors: undefined,
+        },
+        {
+          id: 'only index 1',
+          roleDescriptors: {
+            role: {
+              index: [
+                {
+                  names: [`${ES_TEST_INDEX_NAME}`, `${ES_READ_INDEX_1}`],
+                  privileges: ['all'],
+                },
+              ],
+              applications: [
+                {
+                  application: '*',
+                  privileges: ['*'],
+                  resources: ['*'],
+                },
+              ],
+            },
+          },
+        },
+        {
+          id: 'only index 2',
+          roleDescriptors: {
+            role: {
+              index: [
+                {
+                  names: [`${ES_TEST_INDEX_NAME}`, `${ES_READ_INDEX_2}`],
+                  privileges: ['all'],
+                },
+              ],
+              applications: [
+                {
+                  application: '*',
+                  privileges: ['*'],
+                  resources: ['*'],
+                },
+              ],
+            },
+          },
+        },
+      ];
+
+      for (const roleDescriptorScenario of roleDescriptorScenarios) {
+        it(`with ${roleDescriptorScenario.id} superuser should find appropriate documents to alert on`, async () => {
+          const reference = alertUtils.generateReference();
+
+          const response = await supertestWithoutAuth
+            .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
+            .set('kbn-xsrf', 'foo')
+            .auth(user.username, user.password)
+            .send(
+              getTestAlertData({
+                rule_type_id: 'test.searchAndCopy',
+                params: {
+                  index: ES_READ_INDEX_PATTERN,
+                  writeIndex: ES_TEST_INDEX_NAME,
+                  reference,
+                },
+                role_descriptors: roleDescriptorScenario.roleDescriptors,
+              })
+            );
+          expect(response.statusCode).to.eql(200);
+
+          await esTestIndexTool.waitForDocs('alert:test.searchAndCopy', reference);
+
+          const alertSearchResult = await esTestIndexTool.search(
+            'alert:test.searchAndCopy',
+            reference
+          );
+          switch (roleDescriptorScenario.id) {
+            case 'no limitations':
+              expect(alertSearchResult.body.hits.total.value).to.eql(2);
+              break;
+            case 'only index 1':
+              expect(alertSearchResult.body.hits.total.value).to.eql(1);
+              expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(ES_READ_INDEX_1);
+              break;
+            case 'only index 2':
+              expect(alertSearchResult.body.hits.total.value).to.eql(1);
+              expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(ES_READ_INDEX_2);
+              break;
+          }
+        });
+      }
     });
 
     for (const scenario of UserAtSpaceScenarios) {

@@ -96,7 +96,10 @@ export interface ConstructorOptions {
   spaceId?: string;
   namespace?: string;
   getUserName: () => Promise<string | null>;
-  createAPIKey: (name: string) => Promise<CreateAPIKeyResult>;
+  createAPIKey: (
+    name: string,
+    roleDescriptors?: Record<string, unknown>
+  ) => Promise<CreateAPIKeyResult>;
   getActionsClient: () => Promise<ActionsClient>;
   getEventLogClient: () => Promise<IEventLogClient>;
   kibanaVersion: PluginInitializerContext['env']['packageInfo']['version'];
@@ -164,7 +167,7 @@ export interface CreateOptions<Params extends AlertTypeParams> {
     | 'mutedInstanceIds'
     | 'actions'
     | 'executionStatus'
-  > & { actions: NormalizedAlertAction[] };
+  > & { actions: NormalizedAlertAction[]; roleDescriptors?: Record<string, unknown> };
   options?: {
     id?: string;
     migrationVersion?: Record<string, string>;
@@ -208,7 +211,10 @@ export class RulesClient {
   private readonly unsecuredSavedObjectsClient: SavedObjectsClientContract;
   private readonly authorization: AlertingAuthorization;
   private readonly ruleTypeRegistry: RuleTypeRegistry;
-  private readonly createAPIKey: (name: string) => Promise<CreateAPIKeyResult>;
+  private readonly createAPIKey: (
+    name: string,
+    roleDescriptors?: Record<string, unknown>
+  ) => Promise<CreateAPIKeyResult>;
   private readonly getActionsClient: () => Promise<ActionsClient>;
   private readonly actionsAuthorization: ActionsAuthorization;
   private readonly getEventLogClient: () => Promise<IEventLogClient>;
@@ -288,7 +294,10 @@ export class RulesClient {
     let createdAPIKey = null;
     try {
       createdAPIKey = data.enabled
-        ? await this.createAPIKey(this.generateAPIKeyName(ruleType.id, data.name))
+        ? await this.createAPIKey(
+            this.generateAPIKeyName(ruleType.id, data.name),
+            data.roleDescriptors
+          )
         : null;
     } catch (error) {
       throw Boom.badRequest(`Error creating rule: could not create API key - ${error.message}`);
@@ -321,6 +330,7 @@ export class RulesClient {
       mutedInstanceIds: [],
       notifyWhen,
       executionStatus: getAlertExecutionStatusPending(new Date().toISOString()),
+      roleDescriptors: data.roleDescriptors as RawAlert['roleDescriptors'],
     };
 
     this.auditLogger?.log(
