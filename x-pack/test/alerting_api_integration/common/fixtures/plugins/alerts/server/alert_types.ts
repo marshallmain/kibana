@@ -408,8 +408,18 @@ function getSearchAndCopyAlertType() {
           },
         ];
       });
-      await services.scopedClusterClient.asCurrentUser.bulk({
-        body: bulkRequestBody,
+      if (bulkRequestBody.length > 0) {
+        await services.scopedClusterClient.asCurrentUser.bulk({
+          body: bulkRequestBody,
+        });
+      }
+      await services.scopedClusterClient.asCurrentUser.index({
+        index: params.writeIndex,
+        body: {
+          done: true,
+          source: 'alert:test.searchAndCopyFinished',
+          reference: params.reference,
+        },
       });
     },
   };

@@ -8,7 +8,7 @@
 import expect from '@kbn/expect';
 import { omit } from 'lodash';
 import type { ApiResponse, estypes } from '@elastic/elasticsearch';
-import { UserAtSpaceScenarios, Superuser } from '../../scenarios';
+import { UserAtSpaceScenarios, Superuser, LimitedReadUser, Spaces } from '../../scenarios';
 import { FtrProviderContext } from '../../../common/ftr_provider_context';
 import {
   ESTestIndexTool,
@@ -57,24 +57,14 @@ export default function alertTests({ getService }: FtrProviderContext) {
       await es.indices.delete({ index: authorizationIndex });
     });
 
+    // This block shows how a superuser can limit the permissions of the generated API key using roleDescriptors
     describe('role_descriptors_POC', () => {
-      let alertUtils: AlertUtils;
-      const scenario = UserAtSpaceScenarios[1];
-      const { user, space } = scenario;
-
       before(async () => {
         await es.indices.create({ index: ES_READ_INDEX_1 });
         await es.indices.create({ index: ES_READ_INDEX_2 });
 
         await es.index({ index: ES_READ_INDEX_1, body: { indexName: ES_READ_INDEX_1 } });
         await es.index({ index: ES_READ_INDEX_2, body: { indexName: ES_READ_INDEX_2 } });
-        alertUtils = new AlertUtils({
-          user,
-          space,
-          supertestWithoutAuth,
-          indexRecordActionId: 'fake id',
-          objectRemover,
-        });
       });
 
       after(async () => {
@@ -88,89 +78,169 @@ export default function alertTests({ getService }: FtrProviderContext) {
           roleDescriptors: undefined,
         },
         {
+          id: 'all index permissions',
+          roleDescriptors: {
+            indices: [
+              {
+                names: ['*'],
+                privileges: ['all'],
+              },
+            ],
+          },
+        },
+        {
           id: 'only index 1',
           roleDescriptors: {
-            role: {
-              index: [
-                {
-                  names: [`${ES_TEST_INDEX_NAME}`, `${ES_READ_INDEX_1}`],
-                  privileges: ['all'],
-                },
-              ],
-              applications: [
-                {
-                  application: '*',
-                  privileges: ['*'],
-                  resources: ['*'],
-                },
-              ],
-            },
+            indices: [
+              {
+                names: [`${ES_TEST_INDEX_NAME}`, `${ES_READ_INDEX_1}`],
+                privileges: ['all'],
+              },
+            ],
           },
         },
         {
           id: 'only index 2',
           roleDescriptors: {
-            role: {
-              index: [
-                {
-                  names: [`${ES_TEST_INDEX_NAME}`, `${ES_READ_INDEX_2}`],
-                  privileges: ['all'],
-                },
-              ],
-              applications: [
-                {
-                  application: '*',
-                  privileges: ['*'],
-                  resources: ['*'],
-                },
-              ],
-            },
+            indices: [
+              {
+                names: [`${ES_TEST_INDEX_NAME}`, `${ES_READ_INDEX_2}`],
+                privileges: ['all'],
+              },
+            ],
           },
         },
       ];
 
-      for (const roleDescriptorScenario of roleDescriptorScenarios) {
-        it(`with ${roleDescriptorScenario.id} superuser should find appropriate documents to alert on`, async () => {
-          const reference = alertUtils.generateReference();
+      describe('superuser', async () => {
+        const scenario = UserAtSpaceScenarios[1];
+        const { user, space } = scenario;
+        let alertUtils: AlertUtils;
 
-          const response = await supertestWithoutAuth
-            .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
-            .set('kbn-xsrf', 'foo')
-            .auth(user.username, user.password)
-            .send(
-              getTestAlertData({
-                rule_type_id: 'test.searchAndCopy',
-                params: {
-                  index: ES_READ_INDEX_PATTERN,
-                  writeIndex: ES_TEST_INDEX_NAME,
-                  reference,
-                },
-                role_descriptors: roleDescriptorScenario.roleDescriptors,
-              })
-            );
-          expect(response.statusCode).to.eql(200);
-
-          await esTestIndexTool.waitForDocs('alert:test.searchAndCopy', reference);
-
-          const alertSearchResult = await esTestIndexTool.search(
-            'alert:test.searchAndCopy',
-            reference
-          );
-          switch (roleDescriptorScenario.id) {
-            case 'no limitations':
-              expect(alertSearchResult.body.hits.total.value).to.eql(2);
-              break;
-            case 'only index 1':
-              expect(alertSearchResult.body.hits.total.value).to.eql(1);
-              expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(ES_READ_INDEX_1);
-              break;
-            case 'only index 2':
-              expect(alertSearchResult.body.hits.total.value).to.eql(1);
-              expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(ES_READ_INDEX_2);
-              break;
-          }
+        before(async () => {
+          alertUtils = new AlertUtils({
+            user,
+            space,
+            supertestWithoutAuth,
+            indexRecordActionId: 'fake id',
+            objectRemover,
+          });
         });
-      }
+
+        for (const roleDescriptorScenario of roleDescriptorScenarios) {
+          it(`with ${roleDescriptorScenario.id} roleDescriptors should find appropriate documents to alert on`, async () => {
+            const reference = alertUtils.generateReference();
+
+            const response = await supertestWithoutAuth
+              .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password)
+              .send(
+                getTestAlertData({
+                  rule_type_id: 'test.searchAndCopy',
+                  params: {
+                    index: ES_READ_INDEX_PATTERN,
+                    writeIndex: ES_TEST_INDEX_NAME,
+                    reference,
+                  },
+                  role_descriptors: roleDescriptorScenario.roleDescriptors,
+                })
+              );
+            expect(response.statusCode).to.eql(200);
+
+            await esTestIndexTool.waitForDocs('alert:test.searchAndCopyFinished', reference);
+
+            const alertSearchResult = await esTestIndexTool.search(
+              'alert:test.searchAndCopy',
+              reference
+            );
+            switch (roleDescriptorScenario.id) {
+              case 'no limitations':
+              case 'all index permissions':
+                expect(alertSearchResult.body.hits.total.value).to.eql(2);
+                break;
+              case 'only index 1':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(
+                  ES_READ_INDEX_1
+                );
+                break;
+              case 'only index 2':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(
+                  ES_READ_INDEX_2
+                );
+                break;
+            }
+          });
+        }
+      });
+
+      // This block shows how a user that has a more limited role already interacts with roleDescriptors:
+      // they can't use roleDescriptors to elevate their privileges and view other indices even if they
+      // provide roleDescriptors that give all permissions to all indices
+      describe('limited user', async () => {
+        let alertUtils: AlertUtils;
+        const user = LimitedReadUser;
+        const space = Spaces[0];
+
+        before(async () => {
+          alertUtils = new AlertUtils({
+            user,
+            space,
+            supertestWithoutAuth,
+            indexRecordActionId: 'fake id',
+            objectRemover,
+          });
+        });
+
+        for (const roleDescriptorScenario of roleDescriptorScenarios) {
+          it(`with ${roleDescriptorScenario.id} roleDescriptors should find appropriate documents to alert on`, async () => {
+            const reference = alertUtils.generateReference();
+
+            const response = await supertestWithoutAuth
+              .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password)
+              .send(
+                getTestAlertData({
+                  rule_type_id: 'test.searchAndCopy',
+                  params: {
+                    index: ES_READ_INDEX_PATTERN,
+                    writeIndex: ES_TEST_INDEX_NAME,
+                    reference,
+                  },
+                  role_descriptors: roleDescriptorScenario.roleDescriptors,
+                })
+              );
+            expect(response.statusCode).to.eql(200);
+
+            await esTestIndexTool.waitForDocs('alert:test.searchAndCopyFinished', reference);
+
+            const alertSearchResult = await esTestIndexTool.search(
+              'alert:test.searchAndCopy',
+              reference
+            );
+            switch (roleDescriptorScenario.id) {
+              case 'no limitations':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                break;
+              case 'all index permissions':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                break;
+              case 'only index 1':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(
+                  ES_READ_INDEX_1
+                );
+                break;
+              case 'only index 2':
+                expect(alertSearchResult.body.hits.total.value).to.eql(0);
+                break;
+            }
+          });
+        }
+      });
     });
 
     for (const scenario of UserAtSpaceScenarios) {

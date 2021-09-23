@@ -73,6 +73,7 @@ import { ruleAuditEvent, RuleAuditAction } from './audit_events';
 import { KueryNode, nodeBuilder } from '../../../../../src/plugins/data/common';
 import { mapSortField } from './lib';
 import { getAlertExecutionStatusPending } from '../lib/alert_execution_status';
+import { RoleDescriptors } from '../../common';
 
 export interface RegistryAlertTypeWithAuth extends RegistryRuleType {
   authorizedConsumers: string[];
@@ -96,10 +97,7 @@ export interface ConstructorOptions {
   spaceId?: string;
   namespace?: string;
   getUserName: () => Promise<string | null>;
-  createAPIKey: (
-    name: string,
-    roleDescriptors?: Record<string, unknown>
-  ) => Promise<CreateAPIKeyResult>;
+  createAPIKey: (name: string, roleDescriptors?: RoleDescriptors) => Promise<CreateAPIKeyResult>;
   getActionsClient: () => Promise<ActionsClient>;
   getEventLogClient: () => Promise<IEventLogClient>;
   kibanaVersion: PluginInitializerContext['env']['packageInfo']['version'];
@@ -167,7 +165,7 @@ export interface CreateOptions<Params extends AlertTypeParams> {
     | 'mutedInstanceIds'
     | 'actions'
     | 'executionStatus'
-  > & { actions: NormalizedAlertAction[]; roleDescriptors?: Record<string, unknown> };
+  > & { actions: NormalizedAlertAction[] };
   options?: {
     id?: string;
     migrationVersion?: Record<string, string>;
@@ -213,7 +211,7 @@ export class RulesClient {
   private readonly ruleTypeRegistry: RuleTypeRegistry;
   private readonly createAPIKey: (
     name: string,
-    roleDescriptors?: Record<string, unknown>
+    roleDescriptors?: RoleDescriptors
   ) => Promise<CreateAPIKeyResult>;
   private readonly getActionsClient: () => Promise<ActionsClient>;
   private readonly actionsAuthorization: ActionsAuthorization;

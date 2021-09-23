@@ -6,7 +6,7 @@
  */
 
 import { Space, User } from '../common/types';
-import { ES_TEST_INDEX_NAME } from '../common/lib';
+import { ES_READ_INDEX_1, ES_TEST_INDEX_NAME } from '../common/lib';
 
 const NoKibanaPrivileges: User = {
   username: 'no_kibana_privileges',
@@ -146,6 +146,32 @@ const Space1AllWithRestrictedFixture: User = {
   },
 };
 
+export const LimitedReadUser: User = {
+  username: 'limited_read_user',
+  fullName: 'limited_read_user',
+  password: 'limited_read_user_password',
+  role: {
+    name: 'limited_read_user_role',
+    kibana: [
+      {
+        feature: {
+          actions: ['all'],
+          alertsFixture: ['all'],
+        },
+        spaces: ['space1'],
+      },
+    ],
+    elasticsearch: {
+      indices: [
+        {
+          names: [`${ES_TEST_INDEX_NAME}*`, `${ES_READ_INDEX_1}`],
+          privileges: ['all'],
+        },
+      ],
+    },
+  },
+};
+
 export const Users: User[] = [
   NoKibanaPrivileges,
   Superuser,
@@ -153,6 +179,7 @@ export const Users: User[] = [
   Space1All,
   Space1AllWithRestrictedFixture,
   Space1AllAlertingNoneActions,
+  LimitedReadUser,
 ];
 
 const Space1: Space = {
@@ -201,25 +228,6 @@ const SuperuserAtSpace1: SuperuserAtSpace1 = {
   id: 'superuser at space1',
   user: Superuser,
   space: Space1,
-};
-
-interface SuperuserAtSpace1WithRestrictedRole extends Scenario {
-  id: 'superuser at space1 with restricted role';
-}
-export const SuperuserAtSpace1WithRestrictedRole: SuperuserAtSpace1WithRestrictedRole = {
-  id: 'superuser at space1 with restricted role',
-  user: Superuser,
-  space: Space1,
-  roleDescriptors: {
-    role: {
-      index: [
-        {
-          names: [`${ES_TEST_INDEX_NAME}*`],
-          privileges: ['read'],
-        },
-      ],
-    },
-  },
 };
 
 interface GlobalReadAtSpace1 extends Scenario {

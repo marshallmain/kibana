@@ -13,7 +13,7 @@ import {
 } from 'src/core/server';
 import { PluginStartContract as ActionsPluginStartContract } from '../../actions/server';
 import { RulesClient } from './rules_client';
-import { RuleTypeRegistry, SpaceIdToNamespaceFunction } from './types';
+import { RoleDescriptors, RuleTypeRegistry, SpaceIdToNamespaceFunction } from './types';
 import { SecurityPluginSetup, SecurityPluginStart } from '../../security/server';
 import { EncryptedSavedObjectsClient } from '../../encrypted_saved_objects/server';
 import { TaskManagerStartContract } from '../../task_manager/server';
@@ -98,16 +98,41 @@ export class RulesClientFactory {
         const user = await securityPluginStart.authc.getCurrentUser(request);
         return user ? user.username : null;
       },
-      async createAPIKey(name: string, roleDescriptors?: Record<string, unknown>) {
+      async createAPIKey(name: string, roleDescriptors?: RoleDescriptors) {
         if (!securityPluginStart) {
           return { apiKeysEnabled: false };
         }
+        // The applications and cluster objects are optional within RoleDescriptors. However,
+        // if application and cluster privileges aren't specified then the generated API key won't have any application
+        // or cluster privileges. Specifying full privileges as the default here should cause the generated
+        // API key to retain exactly the user's privileges because API key privileges are the intersection of
+        // RoleDescriptors and user privileges
+
+        // If cluster or applications are provided within RoleDescriptors, they override these defaults and limit
+        // the cluster/application privileges of the API key
+        const completedRoleDescriptors = roleDescriptors
+          ? {
+              role: {
+                // If you remove this applications object, then rules that provide roleDescriptors fail to execute because
+                // the generated API key will have no applications permissions
+                applications: [
+                  {
+                    application: '*',
+                    privileges: ['*'],
+                    resources: ['*'],
+                  },
+                ],
+                cluster: ['all'],
+                ...roleDescriptors,
+              },
+            }
+          : {};
         // Create an API key using the new grant API - in this case the Kibana system user is creating the
         // API key for the user, instead of having the user create it themselves, which requires api_key
         // privileges
         const createAPIKeyResult = await securityPluginStart.authc.apiKeys.grantAsInternalUser(
           request,
-          { name, role_descriptors: roleDescriptors ?? {} }
+          { name, role_descriptors: completedRoleDescriptors }
         );
         if (!createAPIKeyResult) {
           return { apiKeysEnabled: false };

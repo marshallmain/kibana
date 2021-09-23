@@ -61,6 +61,7 @@ export class FixturePlugin implements Plugin<void, void, FixtureSetupDeps, Fixtu
         'test.patternFiring',
         'test.throw',
         'test.longRunning',
+        'test.searchAndCopy',
       ],
       privileges: {
         all: {
@@ -86,6 +87,7 @@ export class FixturePlugin implements Plugin<void, void, FixtureSetupDeps, Fixtu
                 'test.patternFiring',
                 'test.throw',
                 'test.longRunning',
+                'test.searchAndCopy',
               ],
             },
           },
@@ -114,6 +116,7 @@ export class FixturePlugin implements Plugin<void, void, FixtureSetupDeps, Fixtu
                 'test.patternFiring',
                 'test.throw',
                 'test.longRunning',
+                'test.searchAndCopy',
               ],
             },
           },

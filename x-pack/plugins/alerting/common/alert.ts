@@ -55,6 +55,12 @@ export interface AlertAggregations {
   alertExecutionStatus: { [status: string]: number };
 }
 
+export interface RoleDescriptors {
+  indices: Array<Record<string, unknown>>;
+  cluster?: string[];
+  applications?: Array<Record<string, unknown>>;
+}
+
 export interface Alert<Params extends AlertTypeParams = never> {
   id: string;
   enabled: boolean;
@@ -77,7 +83,7 @@ export interface Alert<Params extends AlertTypeParams = never> {
   muteAll: boolean;
   mutedInstanceIds: string[];
   executionStatus: AlertExecutionStatus;
-  roleDescriptors?: Record<string, unknown>;
+  roleDescriptors?: RoleDescriptors;
 }
 
 export type SanitizedAlert<Params extends AlertTypeParams = never> = Omit<Alert<Params>, 'apiKey'>;
