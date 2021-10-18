@@ -7,7 +7,7 @@
 
 import Semver from 'semver';
 import Boom from '@hapi/boom';
-import { omit, isEqual, map, uniq, pick, truncate, trim } from 'lodash';
+import { omit, isEqual, map, uniq, pick, truncate, trim, mapValues } from 'lodash';
 import { i18n } from '@kbn/i18n';
 import { estypes } from '@elastic/elasticsearch';
 import {
@@ -38,6 +38,7 @@ import {
   AlertWithLegacyId,
   SanitizedAlertWithLegacyId,
   PartialAlertWithLegacyId,
+  RawAlertInstance,
 } from '../types';
 import {
   validateAlertTypeParams,
@@ -60,10 +61,14 @@ import {
   AlertingAuthorizationFilterType,
   AlertingAuthorizationFilterOpts,
 } from '../authorization';
-import { IEventLogClient } from '../../../event_log/server';
+import {
+  IEvent,
+  IEventLogClient,
+  IEventLogger,
+  SAVED_OBJECT_REL_PRIMARY,
+} from '../../../event_log/server';
 import { parseIsoOrRelativeDate } from '../lib/iso_or_relative_date';
 import { alertInstanceSummaryFromEventLog } from '../lib/alert_instance_summary_from_event_log';
-import { IEvent } from '../../../event_log/server';
 import { AuditLogger } from '../../../security/server';
 import { parseDuration } from '../../common/parse_duration';
 import { retryIfConflicts } from '../lib/retry_if_conflicts';
@@ -74,6 +79,9 @@ import { KueryNode, nodeBuilder } from '../../../../../src/plugins/data/common';
 import { mapSortField } from './lib';
 import { getAlertExecutionStatusPending } from '../lib/alert_execution_status';
 import { RoleDescriptors } from '../../common';
+import { AlertInstance } from '../alert_instance';
+import { EVENT_LOG_ACTIONS } from '../plugin';
+import { createAlertEventLogRecordObject } from '../lib/create_alert_event_log_record_object';
 
 export interface RegistryAlertTypeWithAuth extends RegistryRuleType {
   authorizedConsumers: string[];
@@ -102,6 +110,7 @@ export interface ConstructorOptions {
   getEventLogClient: () => Promise<IEventLogClient>;
   kibanaVersion: PluginInitializerContext['env']['packageInfo']['version'];
   auditLogger?: AuditLogger;
+  eventLogger?: IEventLogger;
 }
 
 export interface MuteOptions extends IndexType {
@@ -219,6 +228,7 @@ export class RulesClient {
   private readonly encryptedSavedObjectsClient: EncryptedSavedObjectsClient;
   private readonly kibanaVersion!: PluginInitializerContext['env']['packageInfo']['version'];
   private readonly auditLogger?: AuditLogger;
+  private readonly eventLogger?: IEventLogger;
 
   constructor({
     ruleTypeRegistry,
@@ -236,6 +246,7 @@ export class RulesClient {
     getEventLogClient,
     kibanaVersion,
     auditLogger,
+    eventLogger,
   }: ConstructorOptions) {
     this.logger = logger;
     this.getUserName = getUserName;
@@ -252,6 +263,7 @@ export class RulesClient {
     this.getEventLogClient = getEventLogClient;
     this.kibanaVersion = kibanaVersion;
     this.auditLogger = auditLogger;
+    this.eventLogger = eventLogger;
   }
 
   public async create<Params extends AlertTypeParams = never>({
@@ -302,6 +314,17 @@ export class RulesClient {
     }
 
     await this.validateActions(ruleType, data.actions);
+
+    // Validate intervals, if configured
+    if (ruleType.minimumScheduleInterval) {
+      const intervalInMs = parseDuration(data.schedule.interval);
+      const minimumScheduleIntervalInMs = parseDuration(ruleType.minimumScheduleInterval);
+      if (intervalInMs < minimumScheduleIntervalInMs) {
+        throw Boom.badRequest(
+          `Error updating rule: the interval is less than the minimum interval of ${ruleType.minimumScheduleInterval}`
+        );
+      }
+    }
 
     // Extract saved object references for this rule
     const {
@@ -855,6 +878,17 @@ export class RulesClient {
     );
     await this.validateActions(ruleType, data.actions);
 
+    // Validate intervals, if configured
+    if (ruleType.minimumScheduleInterval) {
+      const intervalInMs = parseDuration(data.schedule.interval);
+      const minimumScheduleIntervalInMs = parseDuration(ruleType.minimumScheduleInterval);
+      if (intervalInMs < minimumScheduleIntervalInMs) {
+        throw Boom.badRequest(
+          `Error updating rule: the interval is less than the minimum interval of ${ruleType.minimumScheduleInterval}`
+        );
+      }
+    }
+
     // Extract saved object references for this rule
     const {
       references,
@@ -1119,6 +1153,7 @@ export class RulesClient {
         updatedAt: new Date().toISOString(),
         executionStatus: {
           status: 'pending',
+          lastDuration: 0,
           lastExecutionDate: new Date().toISOString(),
           error: null,
         },
@@ -1184,6 +1219,47 @@ export class RulesClient {
       version = alert.version;
     }
 
+    if (this.eventLogger && attributes.scheduledTaskId) {
+      const { state } = taskInstanceToAlertTaskInstance(
+        await this.taskManager.get(attributes.scheduledTaskId),
+        attributes as unknown as SanitizedAlert
+      );
+
+      const recoveredAlertInstances = mapValues<Record<string, RawAlertInstance>, AlertInstance>(
+        state.alertInstances ?? {},
+        (rawAlertInstance) => new AlertInstance(rawAlertInstance)
+      );
+      const recoveredAlertInstanceIds = Object.keys(recoveredAlertInstances);
+
+      for (const instanceId of recoveredAlertInstanceIds) {
+        const { group: actionGroup, subgroup: actionSubgroup } =
+          recoveredAlertInstances[instanceId].getLastScheduledActions() ?? {};
+        const instanceState = recoveredAlertInstances[instanceId].getState();
+        const message = `instance '${instanceId}' has recovered due to the rule was disabled`;
+
+        const event = createAlertEventLogRecordObject({
+          ruleId: id,
+          ruleName: attributes.name,
+          ruleType: this.ruleTypeRegistry.get(attributes.alertTypeId),
+          instanceId,
+          action: EVENT_LOG_ACTIONS.recoveredInstance,
+          message,
+          state: instanceState,
+          group: actionGroup,
+          subgroup: actionSubgroup,
+          namespace: this.namespace,
+          savedObjects: [
+            {
+              id,
+              type: 'alert',
+              typeId: attributes.alertTypeId,
+              relation: SAVED_OBJECT_REL_PRIMARY,
+            },
+          ],
+        });
+        this.eventLogger.logEvent(event);
+      }
+    }
     try {
       await this.authorization.ensureAuthorized({
         ruleTypeId: attributes.alertTypeId,
