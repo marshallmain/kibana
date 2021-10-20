@@ -33,6 +33,7 @@ import {
   WithoutReservedActionGroups,
   ActionVariable,
   SanitizedRuleConfig,
+  RoleDescriptors,
 } from '../common';
 import { LicenseType } from '../../licensing/server';
 
@@ -192,6 +193,12 @@ export interface RawAlertExecutionStatus extends SavedObjectAttributes {
   };
 }
 
+export interface RawAlertRoleDescriptors extends SavedObjectAttributes {
+  indices: SavedObjectAttributes[];
+  cluster?: string[];
+  applications?: SavedObjectAttributes[];
+}
+
 export type PartialAlert<Params extends AlertTypeParams = never> = Pick<Alert<Params>, 'id'> &
   Partial<Omit<Alert<Params>, 'id'>>;
 
@@ -233,7 +240,7 @@ export interface RawAlert extends SavedObjectAttributes {
   mutedInstanceIds: string[];
   meta?: AlertMeta;
   executionStatus: RawAlertExecutionStatus;
-  roleDescriptors?: SavedObjectAttributes;
+  roleDescriptors?: RawAlertRoleDescriptors;
 }
 
 export type AlertInfoParams = Pick<

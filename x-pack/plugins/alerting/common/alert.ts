@@ -56,10 +56,10 @@ export interface AlertAggregations {
   alertExecutionStatus: { [status: string]: number };
 }
 
-export interface RoleDescriptors {
-  indices: Array<Record<string, unknown>>;
+export interface RoleDescriptors extends SavedObjectAttributes {
+  indices: SavedObjectAttributes[];
   cluster?: string[];
-  applications?: Array<Record<string, unknown>>;
+  applications?: SavedObjectAttributes[];
 }
 
 export interface Alert<Params extends AlertTypeParams = never> {

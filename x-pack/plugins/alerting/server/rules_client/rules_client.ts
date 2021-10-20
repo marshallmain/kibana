@@ -191,6 +191,7 @@ export interface UpdateOptions<Params extends AlertTypeParams> {
     params: Params;
     throttle: string | null;
     notifyWhen: AlertNotifyWhenType | null;
+    roleDescriptors?: RoleDescriptors;
   };
 }
 
@@ -901,7 +902,10 @@ export class RulesClient {
     let createdAPIKey = null;
     try {
       createdAPIKey = attributes.enabled
-        ? await this.createAPIKey(this.generateAPIKeyName(ruleType.id, data.name))
+        ? await this.createAPIKey(
+            this.generateAPIKeyName(ruleType.id, data.name),
+            data.roleDescriptors
+          )
         : null;
     } catch (error) {
       throw Boom.badRequest(`Error updating rule: could not create API key - ${error.message}`);
@@ -1023,7 +1027,8 @@ export class RulesClient {
     let createdAPIKey = null;
     try {
       createdAPIKey = await this.createAPIKey(
-        this.generateAPIKeyName(attributes.alertTypeId, attributes.name)
+        this.generateAPIKeyName(attributes.alertTypeId, attributes.name),
+        attributes.roleDescriptors
       );
     } catch (error) {
       throw Boom.badRequest(
@@ -1139,7 +1144,8 @@ export class RulesClient {
       let createdAPIKey = null;
       try {
         createdAPIKey = await this.createAPIKey(
-          this.generateAPIKeyName(attributes.alertTypeId, attributes.name)
+          this.generateAPIKeyName(attributes.alertTypeId, attributes.name),
+          attributes.roleDescriptors
         );
       } catch (error) {
         throw Boom.badRequest(`Error enabling rule: could not create API key - ${error.message}`);

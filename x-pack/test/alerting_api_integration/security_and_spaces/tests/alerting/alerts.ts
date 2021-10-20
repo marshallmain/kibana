@@ -128,9 +128,10 @@ export default function alertTests({ getService }: FtrProviderContext) {
         });
 
         for (const roleDescriptorScenario of roleDescriptorScenarios) {
-          it(`with ${roleDescriptorScenario.id} roleDescriptors should find appropriate documents to alert on`, async () => {
+          it(`with ${roleDescriptorScenario.id} roleDescriptors should create rule and find appropriate documents to alert on`, async () => {
             const reference = alertUtils.generateReference();
 
+            // Create rule with roleDescriptors immediately
             const response = await supertestWithoutAuth
               .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
               .set('kbn-xsrf', 'foo')
@@ -147,6 +148,81 @@ export default function alertTests({ getService }: FtrProviderContext) {
                 })
               );
             expect(response.statusCode).to.eql(200);
+
+            await esTestIndexTool.waitForDocs('alert:test.searchAndCopyFinished', reference);
+
+            const alertSearchResult = await esTestIndexTool.search(
+              'alert:test.searchAndCopy',
+              reference
+            );
+            switch (roleDescriptorScenario.id) {
+              case 'no limitations':
+              case 'all index permissions':
+                expect(alertSearchResult.body.hits.total.value).to.eql(2);
+                break;
+              case 'only index 1':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(
+                  ES_READ_INDEX_1
+                );
+                break;
+              case 'only index 2':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(
+                  ES_READ_INDEX_2
+                );
+                break;
+            }
+          });
+
+          it(`with ${roleDescriptorScenario.id} roleDescriptors should update rule and find appropriate documents to alert on`, async () => {
+            const reference = alertUtils.generateReference();
+
+            const createData = getTestAlertData({
+              rule_type_id: 'test.searchAndCopy',
+              params: {
+                index: ES_READ_INDEX_PATTERN,
+                writeIndex: ES_TEST_INDEX_NAME,
+                reference,
+              },
+              enabled: false,
+            });
+
+            // Create rule *without* roleDescriptors and disabled, so we can update it with roleDescriptors afterwards
+            const createResponse = await supertestWithoutAuth
+              .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password)
+              .send(
+                getTestAlertData({
+                  rule_type_id: 'test.searchAndCopy',
+                  params: {
+                    index: ES_READ_INDEX_PATTERN,
+                    writeIndex: ES_TEST_INDEX_NAME,
+                    reference,
+                  },
+                  enabled: false,
+                })
+              );
+            expect(createResponse.statusCode).to.eql(200);
+
+            const { enabled, rule_type_id: ruleTypeId, consumer, ...updateData } = createData;
+
+            const updateResponse = await supertestWithoutAuth
+              .put(`${getUrlPrefix(space.id)}/api/alerting/rule/${createResponse.body.id}`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password)
+              .send({
+                ...updateData,
+                role_descriptors: roleDescriptorScenario.roleDescriptors,
+              });
+            expect(updateResponse.statusCode).to.eql(200);
+
+            const enableResponse = await supertestWithoutAuth
+              .post(`${getUrlPrefix(space.id)}/api/alerting/rule/${createResponse.body.id}/_enable`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password);
+            expect(enableResponse.statusCode).to.eql(204);
 
             await esTestIndexTool.waitForDocs('alert:test.searchAndCopyFinished', reference);
 
@@ -195,9 +271,10 @@ export default function alertTests({ getService }: FtrProviderContext) {
         });
 
         for (const roleDescriptorScenario of roleDescriptorScenarios) {
-          it(`with ${roleDescriptorScenario.id} roleDescriptors should find appropriate documents to alert on`, async () => {
+          it(`with ${roleDescriptorScenario.id} roleDescriptors should create rule and find appropriate documents to alert on`, async () => {
             const reference = alertUtils.generateReference();
 
+            // Create rule with roleDescriptors immediately
             const response = await supertestWithoutAuth
               .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
               .set('kbn-xsrf', 'foo')
@@ -214,6 +291,80 @@ export default function alertTests({ getService }: FtrProviderContext) {
                 })
               );
             expect(response.statusCode).to.eql(200);
+
+            await esTestIndexTool.waitForDocs('alert:test.searchAndCopyFinished', reference);
+
+            const alertSearchResult = await esTestIndexTool.search(
+              'alert:test.searchAndCopy',
+              reference
+            );
+            switch (roleDescriptorScenario.id) {
+              case 'no limitations':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                break;
+              case 'all index permissions':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                break;
+              case 'only index 1':
+                expect(alertSearchResult.body.hits.total.value).to.eql(1);
+                expect(alertSearchResult.body.hits.hits[0]._source.indexName).to.eql(
+                  ES_READ_INDEX_1
+                );
+                break;
+              case 'only index 2':
+                expect(alertSearchResult.body.hits.total.value).to.eql(0);
+                break;
+            }
+          });
+
+          it(`with ${roleDescriptorScenario.id} roleDescriptors should update rule and find appropriate documents to alert on`, async () => {
+            const reference = alertUtils.generateReference();
+
+            const createData = getTestAlertData({
+              rule_type_id: 'test.searchAndCopy',
+              params: {
+                index: ES_READ_INDEX_PATTERN,
+                writeIndex: ES_TEST_INDEX_NAME,
+                reference,
+              },
+              enabled: false,
+            });
+
+            // Create rule *without* roleDescriptors and disabled, so we can update it with roleDescriptors afterwards
+            const createResponse = await supertestWithoutAuth
+              .post(`${getUrlPrefix(space.id)}/api/alerting/rule`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password)
+              .send(
+                getTestAlertData({
+                  rule_type_id: 'test.searchAndCopy',
+                  params: {
+                    index: ES_READ_INDEX_PATTERN,
+                    writeIndex: ES_TEST_INDEX_NAME,
+                    reference,
+                  },
+                  enabled: false,
+                })
+              );
+            expect(createResponse.statusCode).to.eql(200);
+
+            const { enabled, rule_type_id: ruleTypeId, consumer, ...updateData } = createData;
+
+            const updateResponse = await supertestWithoutAuth
+              .put(`${getUrlPrefix(space.id)}/api/alerting/rule/${createResponse.body.id}`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password)
+              .send({
+                ...updateData,
+                role_descriptors: roleDescriptorScenario.roleDescriptors,
+              });
+            expect(updateResponse.statusCode).to.eql(200);
+
+            const enableResponse = await supertestWithoutAuth
+              .post(`${getUrlPrefix(space.id)}/api/alerting/rule/${createResponse.body.id}/_enable`)
+              .set('kbn-xsrf', 'foo')
+              .auth(user.username, user.password);
+            expect(enableResponse.statusCode).to.eql(204);
 
             await esTestIndexTool.waitForDocs('alert:test.searchAndCopyFinished', reference);
 

@@ -45,15 +45,23 @@ const bodySchema = schema.object({
     { defaultValue: [] }
   ),
   notify_when: schema.string({ validate: validateNotifyWhenType }),
+  role_descriptors: schema.maybe(
+    schema.object({
+      indices: schema.arrayOf(schema.recordOf(schema.string(), schema.any())),
+      cluster: schema.maybe(schema.arrayOf(schema.string())),
+      applications: schema.maybe(schema.arrayOf(schema.recordOf(schema.string(), schema.any()))),
+    })
+  ),
 });
 
 const rewriteBodyReq: RewriteRequestCase<UpdateOptions<AlertTypeParams>> = (result) => {
-  const { notify_when: notifyWhen, ...rest } = result.data;
+  const { notify_when: notifyWhen, role_descriptors: roleDescriptors, ...rest } = result.data;
   return {
     ...result,
     data: {
       ...rest,
       notifyWhen,
+      roleDescriptors,
     },
   };
 };
@@ -70,6 +78,7 @@ const rewriteBodyRes: RewriteResponseCase<PartialAlert<AlertTypeParams>> = ({
   muteAll,
   mutedInstanceIds,
   executionStatus,
+  roleDescriptors,
   ...rest
 }) => ({
   ...rest,
@@ -102,6 +111,7 @@ const rewriteBodyRes: RewriteResponseCase<PartialAlert<AlertTypeParams>> = ({
         })),
       }
     : {}),
+  ...(roleDescriptors ? { role_descriptors: roleDescriptors } : {}),
 });
 
 export const updateRuleRoute = (
