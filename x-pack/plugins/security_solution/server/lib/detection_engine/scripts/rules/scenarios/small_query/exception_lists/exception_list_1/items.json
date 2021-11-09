@@ -1,0 +1,18 @@
+[
+  {
+    "description": "Exception item",
+    "entries": [
+      {
+        "field": "agent.type",
+        "operator": "included",
+        "list": {
+          "id": "small_query_value_list",
+          "type": "keyword"
+        },
+        "type": "list"
+      }
+    ],
+    "name": "Exception item",
+    "type": "simple"
+  }
+]

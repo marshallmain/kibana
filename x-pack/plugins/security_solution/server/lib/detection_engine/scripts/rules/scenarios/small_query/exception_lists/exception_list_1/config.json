@@ -1,0 +1,5 @@
+{
+  "description": "Exception list for Small Query Scenario",
+  "name": "Small Query Exception List",
+  "type": "detection"
+}
