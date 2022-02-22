@@ -31,7 +31,13 @@ import { ListClient } from '../../../../../lists/server';
 import { Logger } from '../../../../../../../src/core/server';
 import { BuildRuleMessage } from './rule_messages';
 import { ITelemetryEventsSender } from '../../telemetry/sender';
-import { CompleteRule, RuleParams } from '../schemas/rule_schemas';
+import {
+  CompleteRule,
+  QueryRuleParams,
+  RuleParams,
+  SavedQueryRuleParams,
+  ThreatRuleParams,
+} from '../schemas/rule_schemas';
 import { GenericBulkCreateResponse } from './bulk_create_factory';
 import { EcsFieldMap } from '../../../../../rule_registry/common/assets/field_maps/ecs_field_map';
 import { TypeOfFieldMap } from '../../../../../rule_registry/common/field_map';
@@ -309,7 +315,7 @@ export interface SearchAfterAndBulkCreateParams {
     from: moment.Moment;
     maxSignals: number;
   };
-  completeRule: CompleteRule<RuleParams>;
+  completeRule: CompleteRule<QueryRuleParams | ThreatRuleParams | SavedQueryRuleParams>;
   services: AlertServices<AlertInstanceState, AlertInstanceContext, 'default'>;
   listClient: ListClient;
   exceptionsList: ExceptionListItemSchema[];

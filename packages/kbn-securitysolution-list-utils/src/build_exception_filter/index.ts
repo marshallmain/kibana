@@ -99,34 +99,47 @@ export const transformOsType = (
 export const buildExceptionItemFilterWithOsType = (
   osTypes: OsTypeArray,
   entries: NonListEntry[]
-): BooleanFilter[] => {
-  const entriesWithOsTypes = transformOsType(osTypes, entries);
-  return entriesWithOsTypes.map((entryWithOsType) => {
-    return {
-      bool: {
-        filter: entryWithOsType.map((entry) => createInnerAndClauses(entry)),
-      },
-    };
-  });
+): BooleanFilter => {
+  return {
+    bool: {
+      should: [
+        ...osTypes.map((osType) =>
+          createInnerAndClauses({
+            field: 'host.os.type',
+            operator: 'included',
+            type: 'match',
+            value: osType,
+          })
+        ),
+        ...osTypes.map((osType) =>
+          createInnerAndClauses({
+            field: 'host.os.name.caseless',
+            operator: 'included',
+            type: 'match',
+            value: osType,
+          })
+        ),
+      ],
+      filter: entries.map((entry) => createInnerAndClauses(entry)),
+    },
+  };
 };
 
 export const buildExceptionItemFilter = (
   exceptionItem: ExceptionItemSansLargeValueLists
-): Array<BooleanFilter | NestedFilter> => {
+): BooleanFilter | NestedFilter => {
   const { entries, os_types: osTypes } = exceptionItem;
   if (osTypes != null && osTypes.length > 0) {
     return buildExceptionItemFilterWithOsType(osTypes, entries);
   } else {
     if (entries.length === 1) {
-      return [createInnerAndClauses(entries[0])];
+      return createInnerAndClauses(entries[0]);
     } else {
-      return [
-        {
-          bool: {
-            filter: entries.map((entry) => createInnerAndClauses(entry)),
-          },
+      return {
+        bool: {
+          filter: entries.map((entry) => createInnerAndClauses(entry)),
         },
-      ];
+      };
     }
   }
 };
@@ -134,7 +147,39 @@ export const buildExceptionItemFilter = (
 export const createOrClauses = (
   exceptionItems: ExceptionItemSansLargeValueLists[]
 ): Array<BooleanFilter | NestedFilter> => {
-  return exceptionItems.flatMap((exceptionItem) => buildExceptionItemFilter(exceptionItem));
+  return exceptionItems.map((exceptionItem) => buildExceptionItemFilter(exceptionItem));
+};
+
+export const buildExceptionItemAggs = (exceptionItem: ExceptionItemSansLargeValueLists) => {
+  return exceptionItem.entries.reduce<Record<string, unknown>>((acc, currentEntry, index) => {
+    acc[`field_${currentEntry.field}`] = {
+      terms: {
+        field: currentEntry.field,
+      },
+    };
+    return acc;
+  }, {});
+};
+
+export const buildExceptionListAggs = ({
+  lists,
+}: {
+  lists: Array<ExceptionListItemSchema | CreateExceptionListItemSchema>;
+}) => {
+  const exceptionsWithoutLargeValueLists = lists.filter(
+    (item): item is ExceptionItemSansLargeValueLists => !hasLargeValueList(item.entries)
+  );
+
+  return exceptionsWithoutLargeValueLists.reduce<Record<string, unknown>>(
+    (acc: Record<string, unknown>, currentExceptionItem, index) => {
+      acc[`exception_${index}`] = {
+        filter: buildExceptionItemFilter(currentExceptionItem),
+        aggs: buildExceptionItemAggs(currentExceptionItem),
+      };
+      return acc;
+    },
+    {}
+  );
 };
 
 export const buildExceptionFilter = ({

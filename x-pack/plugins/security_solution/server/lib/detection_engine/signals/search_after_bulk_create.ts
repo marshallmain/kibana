@@ -7,6 +7,7 @@
 
 import { identity } from 'lodash';
 import type * as estypes from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
+import { buildExceptionListAggs } from '@kbn/securitysolution-list-utils';
 import { singleSearchAfter } from './single_search_after';
 import { filterEventsAgainstList } from './filters/filter_events_against_list';
 import { sendAlertTelemetryEvents } from './send_telemetry_events';
@@ -19,8 +20,14 @@ import {
   mergeSearchResults,
   getSafeSortIds,
 } from './utils';
-import { SearchAfterAndBulkCreateParams, SearchAfterAndBulkCreateReturnType } from './types';
+import {
+  SearchAfterAndBulkCreateParams,
+  SearchAfterAndBulkCreateReturnType,
+  SignalSearchResponse,
+} from './types';
 import { withSecuritySpan } from '../../../utils/with_security_span';
+import { getQueryFilter } from '../../../../common/detection_engine/get_query_filter';
+import { Logger } from '../../../../../../../src/core/server';
 
 // search_after through documents and re-index using bulk endpoint.
 export const searchAfterAndBulkCreate = async ({
@@ -194,7 +201,59 @@ export const searchAfterAndBulkCreate = async ({
         ]);
       }
     }
+    const exceptionUsageQuery = getQueryFilter(
+      ruleParams.query ?? '',
+      ruleParams.language,
+      ruleParams.filters || [],
+      inputIndexPattern,
+      exceptionsList,
+      false
+    );
+    const exceptionsAggregation = buildExceptionListAggs({ lists: exceptionsList });
+    const { searchResult, searchDuration, searchErrors } = await singleSearchAfter({
+      buildRuleMessage,
+      searchAfterSortIds: undefined,
+      index: inputIndexPattern,
+      from: tuple.from.toISOString(),
+      to: tuple.to.toISOString(),
+      services,
+      logger,
+      // @ts-expect-error please, declare a type explicitly instead of unknown
+      filter: exceptionUsageQuery,
+      pageSize: 0,
+      timestampOverride: ruleParams.timestampOverride,
+      trackTotalHits: false,
+      sortOrder,
+      // @ts-expect-error TODO fix
+      aggregations: exceptionsAggregation,
+    });
+    parseAggregationResult({ searchResult, logger });
     logger.debug(buildRuleMessage(`[+] completed bulk index of ${toReturn.createdSignalsCount}`));
     return toReturn;
   });
+};
+
+const parseAggregationResult = ({
+  searchResult,
+  logger,
+}: {
+  searchResult: SignalSearchResponse;
+  logger: Logger;
+}) => {
+  logger.info(`## Exceptions Usage`);
+  if (searchResult.aggregations != null) {
+    for (const [key, value] of Object.entries(searchResult.aggregations)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyValue = value as any;
+      logger.info(`#### ${key} filtered ${anyValue.doc_count} documents`);
+      for (const [fieldKey, fieldValue] of Object.entries(value)) {
+        if (fieldKey.startsWith('field_')) {
+          logger.info(`###### Common field values for ${fieldKey.substring(6)}:`);
+          for (const bucket of fieldValue.buckets) {
+            logger.info(`######## Value: ${bucket.key}  Count: ${bucket.doc_count}`);
+          }
+        }
+      }
+    }
+  }
 };
