@@ -8,7 +8,6 @@
 import { has, isEmpty } from 'lodash/fp';
 import type { Unit } from '@kbn/datemath';
 import moment from 'moment';
-import deepmerge from 'deepmerge';
 import omit from 'lodash/omit';
 
 import type {
@@ -35,10 +34,6 @@ import type {
   DefineStepRule,
   ScheduleStepRule,
   ActionsStepRule,
-  DefineStepRuleJson,
-  ScheduleStepRuleJson,
-  AboutStepRuleJson,
-  ActionsStepRuleJson,
   RuleStepsFormData,
   RuleStep,
 } from '../types';
@@ -83,11 +78,11 @@ export const isScheduleStep = (input: unknown): input is RuleStepsFormData[RuleS
 export const isActionsStep = (input: unknown): input is RuleStepsFormData[RuleStep.ruleActions] =>
   has('data.actions', input);
 
-export interface RuleFields {
+interface RuleFields {
   anomalyThreshold: unknown;
   machineLearningJobId: unknown;
   queryBar: unknown;
-  index: unknown;
+  index?: unknown;
   dataViewId?: unknown;
   ruleType: unknown;
   threshold?: unknown;
@@ -100,211 +95,102 @@ export interface RuleFields {
   historyWindowSize?: unknown;
 }
 
-type QueryRuleFields<T> = Omit<
-  T,
-  | 'anomalyThreshold'
-  | 'machineLearningJobId'
-  | 'threshold'
-  | 'threatIndex'
-  | 'threatQueryBar'
-  | 'threatMapping'
-  | 'eqlOptions'
-  | 'newTermsFields'
-  | 'historyWindowSize'
->;
-type EqlQueryRuleFields<T> = Omit<
-  T,
-  | 'anomalyThreshold'
-  | 'machineLearningJobId'
-  | 'threshold'
-  | 'threatIndex'
-  | 'threatQueryBar'
-  | 'threatMapping'
-  | 'newTermsFields'
-  | 'historyWindowSize'
->;
-type ThresholdRuleFields<T> = Omit<
-  T,
-  | 'anomalyThreshold'
-  | 'machineLearningJobId'
-  | 'threatIndex'
-  | 'threatQueryBar'
-  | 'threatMapping'
-  | 'eqlOptions'
-  | 'newTermsFields'
-  | 'historyWindowSize'
->;
-type MlRuleFields<T> = Omit<
-  T,
-  | 'queryBar'
-  | 'index'
-  | 'threshold'
-  | 'threatIndex'
-  | 'threatQueryBar'
-  | 'threatMapping'
-  | 'eqlOptions'
-  | 'newTermsFields'
-  | 'historyWindowSize'
->;
-type ThreatMatchRuleFields<T> = Omit<
-  T,
-  | 'anomalyThreshold'
-  | 'machineLearningJobId'
-  | 'threshold'
-  | 'eqlOptions'
-  | 'newTermsFields'
-  | 'historyWindowSize'
->;
-type NewTermsRuleFields<T> = Omit<
-  T,
-  | 'anomalyThreshold'
-  | 'machineLearningJobId'
-  | 'threshold'
-  | 'threatIndex'
-  | 'threatQueryBar'
-  | 'threatMapping'
-  | 'eqlOptions'
->;
+interface CommonQueryFields {
+  queryBar: unknown;
+  index: unknown;
+  dataViewId?: unknown;
+}
 
-const isMlFields = <T>(
-  fields:
-    | QueryRuleFields<T>
-    | EqlQueryRuleFields<T>
-    | MlRuleFields<T>
-    | ThresholdRuleFields<T>
-    | ThreatMatchRuleFields<T>
-    | NewTermsRuleFields<T>
-): fields is MlRuleFields<T> => has('anomalyThreshold', fields);
+interface QueryRuleFields extends CommonQueryFields {
+  ruleType: 'query' | 'saved_query';
+}
+interface EqlQueryRuleFields extends CommonQueryFields {
+  ruleType: 'eql';
+  eqlOptions: unknown;
+}
+interface ThresholdRuleFields extends CommonQueryFields {
+  ruleType: 'threshold';
+  threshold: unknown;
+}
+interface MlRuleFields {
+  ruleType: 'machine_learning';
+  anomalyThreshold: unknown;
+  machineLearningJobId: unknown;
+}
+interface ThreatMatchRuleFields extends CommonQueryFields {
+  ruleType: 'threat_match';
+  threatIndex: unknown;
+  threatQueryBar: unknown;
+  threatMapping: unknown;
+  threatLanguage: unknown;
+}
+interface NewTermsRuleFields extends CommonQueryFields {
+  ruleType: 'new_terms';
+  newTermsFields: unknown;
+  historyWindowSize: unknown;
+}
 
-const isThresholdFields = <T>(
-  fields:
-    | QueryRuleFields<T>
-    | EqlQueryRuleFields<T>
-    | MlRuleFields<T>
-    | ThresholdRuleFields<T>
-    | ThreatMatchRuleFields<T>
-    | NewTermsRuleFields<T>
-): fields is ThresholdRuleFields<T> => has('threshold', fields);
-
-const isThreatMatchFields = <T>(
-  fields:
-    | QueryRuleFields<T>
-    | EqlQueryRuleFields<T>
-    | MlRuleFields<T>
-    | ThresholdRuleFields<T>
-    | ThreatMatchRuleFields<T>
-    | NewTermsRuleFields<T>
-): fields is ThreatMatchRuleFields<T> => has('threatIndex', fields);
-
-const isNewTermsFields = <T>(
-  fields:
-    | QueryRuleFields<T>
-    | EqlQueryRuleFields<T>
-    | MlRuleFields<T>
-    | ThresholdRuleFields<T>
-    | ThreatMatchRuleFields<T>
-    | NewTermsRuleFields<T>
-): fields is NewTermsRuleFields<T> => has('newTermsFields', fields);
-
-const isEqlFields = <T>(
-  fields:
-    | QueryRuleFields<T>
-    | EqlQueryRuleFields<T>
-    | MlRuleFields<T>
-    | ThresholdRuleFields<T>
-    | ThreatMatchRuleFields<T>
-    | NewTermsRuleFields<T>
-): fields is EqlQueryRuleFields<T> => has('eqlOptions', fields);
-
-export const filterRuleFieldsForType = <T extends Partial<RuleFields>>(
-  fields: T,
+export const filterRuleFieldsForType = (
+  fields: RuleFields,
   type: Type
 ):
-  | QueryRuleFields<T>
-  | EqlQueryRuleFields<T>
-  | MlRuleFields<T>
-  | ThresholdRuleFields<T>
-  | ThreatMatchRuleFields<T>
-  | NewTermsRuleFields<T> => {
+  | QueryRuleFields
+  | EqlQueryRuleFields
+  | MlRuleFields
+  | ThresholdRuleFields
+  | ThreatMatchRuleFields
+  | NewTermsRuleFields => {
   switch (type) {
     case 'machine_learning':
-      const {
-        index,
-        queryBar,
-        threshold,
-        threatIndex,
-        threatQueryBar,
-        threatMapping,
-        eqlOptions,
-        newTermsFields,
-        historyWindowSize,
-        ...mlRuleFields
-      } = fields;
-      return mlRuleFields;
+      return {
+        ruleType: type,
+        anomalyThreshold: fields.anomalyThreshold,
+        machineLearningJobId: fields.machineLearningJobId,
+      };
     case 'threshold':
-      const {
-        anomalyThreshold,
-        machineLearningJobId,
-        threatIndex: _removedThreatIndex,
-        threatQueryBar: _removedThreatQueryBar,
-        threatMapping: _removedThreatMapping,
-        eqlOptions: _eqlOptions,
-        newTermsFields: removedNewTermsFields,
-        historyWindowSize: removedHistoryWindowSize,
-        ...thresholdRuleFields
-      } = fields;
-      return thresholdRuleFields;
+      return {
+        ruleType: type,
+        queryBar: fields.queryBar,
+        index: fields.index,
+        dataViewId: fields.dataViewId,
+        threshold: fields.threshold,
+      };
     case 'threat_match':
-      const {
-        anomalyThreshold: _removedAnomalyThreshold,
-        machineLearningJobId: _removedMachineLearningJobId,
-        threshold: _removedThreshold,
-        eqlOptions: __eqlOptions,
-        newTermsFields: _removedNewTermsFields,
-        historyWindowSize: _removedHistoryWindowSize,
-        ...threatMatchRuleFields
-      } = fields;
-      return threatMatchRuleFields;
+      return {
+        ruleType: type,
+        queryBar: fields.queryBar,
+        index: fields.index,
+        dataViewId: fields.dataViewId,
+        threatIndex: fields.threatIndex,
+        threatQueryBar: fields.threatQueryBar,
+        threatMapping: fields.threatMapping,
+        threatLanguage: fields.threatLanguage,
+      };
     case 'query':
     case 'saved_query':
-      const {
-        anomalyThreshold: _a,
-        machineLearningJobId: _m,
-        threshold: _t,
-        threatIndex: __removedThreatIndex,
-        threatQueryBar: __removedThreatQueryBar,
-        threatMapping: __removedThreatMapping,
-        eqlOptions: ___eqlOptions,
-        newTermsFields: __removedNewTermsFields,
-        historyWindowSize: __removedHistoryWindowSize,
-        ...queryRuleFields
-      } = fields;
-      return queryRuleFields;
+      return {
+        ruleType: type,
+        queryBar: fields.queryBar,
+        index: fields.index,
+        dataViewId: fields.dataViewId,
+      };
     case 'eql':
-      const {
-        anomalyThreshold: __a,
-        machineLearningJobId: __m,
-        threshold: __t,
-        threatIndex: ___removedThreatIndex,
-        threatQueryBar: ___removedThreatQueryBar,
-        threatMapping: ___removedThreatMapping,
-        newTermsFields: ___removedNewTermsFields,
-        historyWindowSize: ___removedHistoryWindowSize,
-        ...eqlRuleFields
-      } = fields;
-      return eqlRuleFields;
+      return {
+        ruleType: type,
+        queryBar: fields.queryBar,
+        index: fields.index,
+        dataViewId: fields.dataViewId,
+        eqlOptions: fields.eqlOptions,
+      };
     case 'new_terms':
-      const {
-        anomalyThreshold: ___a,
-        machineLearningJobId: ___m,
-        threshold: ___t,
-        threatIndex: ____removedThreatIndex,
-        threatQueryBar: ____removedThreatQueryBar,
-        threatMapping: ____removedThreatMapping,
-        eqlOptions: ____eqlOptions,
-        ...newTermsRuleFields
-      } = fields;
-      return newTermsRuleFields;
+      return {
+        ruleType: type,
+        queryBar: fields.queryBar,
+        index: fields.index,
+        dataViewId: fields.dataViewId,
+        newTermsFields: fields.newTermsFields,
+        historyWindowSize: fields.historyWindowSize,
+      };
   }
   assertUnreachable(type);
 };
@@ -357,108 +243,110 @@ export const getStepDataDataSource = (
   return copiedStepData;
 };
 
-export const formatDefineStepData = (defineStepData: DefineStepRule): DefineStepRuleJson => {
+export const formatDefineStepData = (defineStepData: DefineStepRule) => {
   const stepData = getStepDataDataSource(defineStepData);
 
-  const ruleFields = filterRuleFieldsForType(stepData, stepData.ruleType);
-  const { ruleType, timeline } = ruleFields;
-
   const baseFields = {
-    type: ruleType,
-    ...(timeline.id != null &&
-      timeline.title != null && {
-        timeline_id: timeline.id,
-        timeline_title: timeline.title,
+    ...(stepData.timeline.id != null &&
+      stepData.timeline.title != null && {
+        timeline_id: stepData.timeline.id,
+        timeline_title: stepData.timeline.title,
       }),
   };
 
-  const typeFields = isMlFields(ruleFields)
-    ? {
-        anomaly_threshold: ruleFields.anomalyThreshold,
-        machine_learning_job_id: ruleFields.machineLearningJobId,
-      }
-    : isThresholdFields(ruleFields)
-    ? {
-        index: ruleFields.index,
-        filters: ruleFields.queryBar?.filters,
-        language: ruleFields.queryBar?.query?.language,
-        query: ruleFields.queryBar?.query?.query as string,
-        saved_id: ruleFields.queryBar?.saved_id ?? undefined,
-        ...(ruleType === 'threshold' && {
+  const typeFields =
+    stepData.ruleType === 'machine_learning'
+      ? {
+          type: stepData.ruleType,
+          anomaly_threshold: stepData.anomalyThreshold,
+          machine_learning_job_id: stepData.machineLearningJobId,
+        }
+      : stepData.ruleType === 'threshold'
+      ? {
+          type: stepData.ruleType,
+          index: stepData.index,
+          filters: stepData.queryBar?.filters,
+          language: stepData.queryBar?.query?.language as 'kuery' | 'lucene',
+          query: stepData.queryBar?.query?.query as string,
+          saved_id: stepData.queryBar?.saved_id ?? undefined,
           threshold: {
-            field: ruleFields.threshold?.field ?? [],
-            value: parseInt(ruleFields.threshold?.value, 10) ?? 0,
+            field: stepData.threshold?.field ?? [],
+            value: parseInt(stepData.threshold?.value, 10) ?? 0,
             cardinality:
-              !isEmpty(ruleFields.threshold.cardinality?.field) &&
-              ruleFields.threshold.cardinality?.value != null
+              !isEmpty(stepData.threshold.cardinality?.field) &&
+              stepData.threshold.cardinality?.value != null
                 ? [
                     {
-                      field: ruleFields.threshold.cardinality.field[0],
-                      value: parseInt(ruleFields.threshold.cardinality.value, 10),
+                      field: stepData.threshold.cardinality.field[0],
+                      value: parseInt(stepData.threshold.cardinality.value, 10),
                     },
                   ]
                 : [],
           },
-        }),
-      }
-    : isThreatMatchFields(ruleFields)
-    ? {
-        index: ruleFields.index,
-        filters: ruleFields.queryBar?.filters,
-        language: ruleFields.queryBar?.query?.language,
-        query: ruleFields.queryBar?.query?.query as string,
-        saved_id: ruleFields.queryBar?.saved_id ?? undefined,
-        threat_index: ruleFields.threatIndex,
-        threat_query: ruleFields.threatQueryBar?.query?.query as string,
-        threat_filters: ruleFields.threatQueryBar?.filters,
-        threat_mapping: ruleFields.threatMapping,
-        threat_language: ruleFields.threatQueryBar?.query?.language,
-      }
-    : isEqlFields(ruleFields)
-    ? {
-        index: ruleFields.index,
-        filters: ruleFields.queryBar?.filters,
-        language: ruleFields.queryBar?.query?.language,
-        query: ruleFields.queryBar?.query?.query as string,
-        saved_id: ruleFields.queryBar?.saved_id ?? undefined,
-        timestamp_field: ruleFields.eqlOptions?.timestampField,
-        event_category_override: ruleFields.eqlOptions?.eventCategoryField,
-        tiebreaker_field: ruleFields.eqlOptions?.tiebreakerField,
-      }
-    : isNewTermsFields(ruleFields)
-    ? {
-        index: ruleFields.index,
-        filters: ruleFields.queryBar?.filters,
-        language: ruleFields.queryBar?.query?.language,
-        query: ruleFields.queryBar?.query?.query as string,
-        new_terms_fields: ruleFields.newTermsFields,
-        history_window_start: `now-${ruleFields.historyWindowSize}`,
-      }
-    : {
-        index: ruleFields.index,
-        filters: ruleFields.queryBar?.filters,
-        language: ruleFields.queryBar?.query?.language,
-        query: ruleFields.queryBar?.query?.query as string,
-        saved_id: undefined,
-        type: 'query' as Type,
-        // rule only be updated as saved_query type if it has saved_id and shouldLoadQueryDynamically checkbox checked
-        ...(['query', 'saved_query'].includes(ruleType) &&
-          ruleFields.queryBar?.saved_id &&
-          ruleFields.shouldLoadQueryDynamically && {
-            type: 'saved_query' as Type,
-            query: undefined,
+        }
+      : stepData.ruleType === 'threat_match'
+      ? {
+          type: stepData.ruleType,
+          index: stepData.index,
+          filters: stepData.queryBar?.filters,
+          language: stepData.queryBar?.query?.language as 'kuery' | 'lucene',
+          query: stepData.queryBar?.query?.query as string,
+          saved_id: stepData.queryBar?.saved_id ?? undefined,
+          threat_index: stepData.threatIndex,
+          threat_query: stepData.threatQueryBar?.query?.query as string,
+          threat_filters: stepData.threatQueryBar?.filters,
+          threat_mapping: stepData.threatMapping,
+          threat_language: stepData.threatQueryBar?.query?.language as 'kuery' | 'lucene',
+        }
+      : stepData.ruleType === 'eql'
+      ? {
+          type: stepData.ruleType,
+          index: stepData.index,
+          filters: stepData.queryBar?.filters,
+          language: stepData.queryBar?.query?.language as 'eql',
+          query: stepData.queryBar?.query?.query as string,
+          saved_id: stepData.queryBar?.saved_id ?? undefined,
+          timestamp_field: stepData.eqlOptions?.timestampField,
+          event_category_override: stepData.eqlOptions?.eventCategoryField,
+          tiebreaker_field: stepData.eqlOptions?.tiebreakerField,
+        }
+      : stepData.ruleType === 'new_terms'
+      ? {
+          type: stepData.ruleType,
+          index: stepData.index,
+          filters: stepData.queryBar?.filters,
+          language: stepData.queryBar?.query?.language as 'kuery' | 'lucene',
+          query: stepData.queryBar?.query?.query as string,
+          new_terms_fields: stepData.newTermsFields,
+          history_window_start: `now-${stepData.historyWindowSize}`,
+        }
+      : stepData.ruleType === 'query' || stepData.ruleType === 'saved_query'
+      ? stepData.queryBar?.saved_id && stepData.shouldLoadQueryDynamically
+        ? {
+            type: 'saved_query' as const,
+            index: stepData.index,
             filters: undefined,
-            saved_id: ruleFields.queryBar.saved_id,
-          }),
-      };
+            language: stepData.queryBar?.query?.language as 'kuery' | 'lucene',
+            query: undefined,
+            saved_id: stepData.queryBar.saved_id,
+          }
+        : {
+            type: 'query' as const,
+            index: stepData.index,
+            filters: stepData.queryBar?.filters,
+            language: stepData.queryBar?.query?.language as 'kuery' | 'lucene',
+            query: stepData.queryBar?.query?.query as string,
+            saved_id: undefined,
+          }
+      : assertUnreachable(stepData.ruleType);
   return {
     ...baseFields,
     ...typeFields,
-    data_view_id: ruleFields.dataViewId,
+    data_view_id: stepData.dataViewId,
   };
 };
 
-export const formatScheduleStepData = (scheduleData: ScheduleStepRule): ScheduleStepRuleJson => {
+export const formatScheduleStepData = (scheduleData: ScheduleStepRule) => {
   const { ...formatScheduleData } = scheduleData;
   if (!isEmpty(formatScheduleData.interval) && !isEmpty(formatScheduleData.from)) {
     const { unit: intervalUnit, value: intervalValue } = getTimeTypeValue(
@@ -478,10 +366,7 @@ export const formatScheduleStepData = (scheduleData: ScheduleStepRule): Schedule
   };
 };
 
-export const formatAboutStepData = (
-  aboutStepData: AboutStepRule,
-  exceptionsList?: List[]
-): AboutStepRuleJson => {
+export const formatAboutStepData = (aboutStepData: AboutStepRule, exceptionsList?: List[]) => {
   const {
     author,
     falsePositives,
@@ -546,7 +431,7 @@ export const formatAboutStepData = (
   return resp;
 };
 
-export const formatActionsStepData = (actionsStepData: ActionsStepRule): ActionsStepRuleJson => {
+export const formatActionsStepData = (actionsStepData: ActionsStepRule) => {
   const {
     actions = [],
     responseActions,
@@ -566,22 +451,21 @@ export const formatActionsStepData = (actionsStepData: ActionsStepRule): Actions
   };
 };
 
-// Used to format form data in rule edit and
-// create flows so "T" here would likely
-// either be CreateRulesSchema or Rule
-export const formatRule = <T>(
+// Converts rule data from form steps to format expected by API
+export const formatRule = (
   defineStepData: DefineStepRule,
   aboutStepData: AboutStepRule,
   scheduleData: ScheduleStepRule,
   actionsData: ActionsStepRule,
   exceptionsList?: List[]
-): T =>
-  deepmerge.all([
-    formatDefineStepData(defineStepData),
-    formatAboutStepData(aboutStepData, exceptionsList),
-    formatScheduleStepData(scheduleData),
-    formatActionsStepData(actionsData),
-  ]) as unknown as T;
+): CreateRulesSchema => {
+  return {
+    ...formatDefineStepData(defineStepData),
+    ...formatAboutStepData(aboutStepData, exceptionsList),
+    ...formatScheduleStepData(scheduleData),
+    ...formatActionsStepData(actionsData),
+  };
+};
 
 export const formatPreviewRule = ({
   defineRuleData,
@@ -600,7 +484,7 @@ export const formatPreviewRule = ({
     description: 'Preview Rule',
   };
   return {
-    ...formatRule<CreateRulesSchema>(
+    ...formatRule(
       defineRuleData,
       aboutStepData,
       scheduleRuleData,

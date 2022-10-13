@@ -7,21 +7,11 @@
 
 import type { List } from '@kbn/securitysolution-io-ts-list-types';
 import type { CreateRulesSchema } from '../../../../../../common/detection_engine/schemas/request';
-import type { Rule } from '../../../../containers/detection_engine/rules';
 import {
   getListMock,
   getEndpointListMock,
 } from '../../../../../../common/detection_engine/schemas/types/lists.mock';
-import type {
-  DefineStepRuleJson,
-  ScheduleStepRuleJson,
-  AboutStepRuleJson,
-  ActionsStepRuleJson,
-  AboutStepRule,
-  ActionsStepRule,
-  ScheduleStepRule,
-  DefineStepRule,
-} from '../types';
+import type { AboutStepRule, ActionsStepRule, ScheduleStepRule, DefineStepRule } from '../types';
 import {
   getTimeTypeValue,
   formatDefineStepData,
@@ -114,7 +104,7 @@ describe('helpers', () => {
 
     test('returns formatted object as DefineStepRuleJson', () => {
       const result = formatDefineStepData(mockData);
-      const expected: DefineStepRuleJson = {
+      const expected = {
         language: 'kuery',
         filters: mockQueryBar.filters,
         query: 'test query',
@@ -295,7 +285,7 @@ describe('helpers', () => {
       };
       const result = formatDefineStepData(mockStepData);
 
-      const expected: DefineStepRuleJson = {
+      const expected = {
         type: 'machine_learning',
         anomaly_threshold: 44,
         machine_learning_job_id: ['some_jobert_id'],
@@ -321,7 +311,7 @@ describe('helpers', () => {
       };
       const result = formatDefineStepData(mockStepData);
 
-      const expected: DefineStepRuleJson = {
+      const expected = {
         filters: mockStepData.queryBar.filters,
         index: mockStepData.index,
         language: 'eql',
@@ -352,7 +342,7 @@ describe('helpers', () => {
       };
       const result = formatDefineStepData(mockStepData);
 
-      const expected: DefineStepRuleJson = {
+      const expected = {
         filters: mockStepData.queryBar.filters,
         index: mockStepData.index,
         language: 'eql',
@@ -412,7 +402,7 @@ describe('helpers', () => {
       };
       const result = formatDefineStepData(mockStepData);
 
-      const expected: DefineStepRuleJson = {
+      const expected = {
         language: 'kuery',
         query: 'test query',
         saved_id: 'test123',
@@ -441,7 +431,7 @@ describe('helpers', () => {
 
     test('returns formatted object as ScheduleStepRuleJson', () => {
       const result = formatScheduleStepData(mockData);
-      const expected: ScheduleStepRuleJson = {
+      const expected = {
         from: 'now-660s',
         to: 'now',
         interval: '5m',
@@ -459,7 +449,7 @@ describe('helpers', () => {
       };
       delete mockStepData.to;
       const result = formatScheduleStepData(mockStepData);
-      const expected: ScheduleStepRuleJson = {
+      const expected = {
         from: 'now-660s',
         to: 'now',
         interval: '5m',
@@ -477,7 +467,7 @@ describe('helpers', () => {
         to: 'random',
       };
       const result = formatScheduleStepData(mockStepData);
-      const expected: ScheduleStepRuleJson = {
+      const expected = {
         from: 'now-660s',
         to: 'now',
         interval: '5m',
@@ -495,7 +485,7 @@ describe('helpers', () => {
         from: 'random',
       };
       const result = formatScheduleStepData(mockStepData);
-      const expected: ScheduleStepRuleJson = {
+      const expected = {
         from: 'now-300s',
         to: 'now',
         interval: '5m',
@@ -513,7 +503,7 @@ describe('helpers', () => {
         interval: 'random',
       };
       const result = formatScheduleStepData(mockStepData);
-      const expected: ScheduleStepRuleJson = {
+      const expected = {
         from: 'now-360s',
         to: 'now',
         interval: 'random',
@@ -535,7 +525,7 @@ describe('helpers', () => {
 
     test('returns formatted object as AboutStepRuleJson', () => {
       const result = formatAboutStepData(mockData);
-      const expected: AboutStepRuleJson = {
+      const expected = {
         author: ['Elastic'],
         description: '24/7',
         false_positives: ['test'],
@@ -615,7 +605,7 @@ describe('helpers', () => {
         references: ['www.test.co', ''],
       };
       const result = formatAboutStepData(mockStepData);
-      const expected: AboutStepRuleJson = {
+      const expected = {
         author: ['Elastic'],
         description: '24/7',
         false_positives: ['test'],
@@ -640,7 +630,7 @@ describe('helpers', () => {
         note: '',
       };
       const result = formatAboutStepData(mockStepData);
-      const expected: AboutStepRuleJson = {
+      const expected = {
         author: ['Elastic'],
         description: '24/7',
         false_positives: ['test'],
@@ -682,7 +672,7 @@ describe('helpers', () => {
         ],
       };
       const result = formatAboutStepData(mockStepData);
-      const expected: AboutStepRuleJson = {
+      const expected = {
         author: ['Elastic'],
         license: 'Elastic License',
         description: '24/7',
@@ -725,7 +715,7 @@ describe('helpers', () => {
         ],
       };
       const result = formatAboutStepData(mockStepData);
-      const expected: AboutStepRuleJson = {
+      const expected = {
         author: ['Elastic'],
         license: 'Elastic License',
         description: '24/7',
@@ -760,7 +750,7 @@ describe('helpers', () => {
         timestampOverrideFallbackDisabled: true,
       };
       const result = formatAboutStepData(mockStepData);
-      const expected: AboutStepRuleJson = {
+      const expected = {
         author: ['Elastic'],
         description: '24/7',
         false_positives: ['test'],
@@ -791,7 +781,7 @@ describe('helpers', () => {
 
     test('returns formatted object as ActionsStepRuleJson', () => {
       const result = formatActionsStepData(mockData);
-      const expected: ActionsStepRuleJson = {
+      const expected = {
         actions: [],
         enabled: false,
         meta: {
@@ -809,7 +799,7 @@ describe('helpers', () => {
         throttle: 'no_actions',
       };
       const result = formatActionsStepData(mockStepData);
-      const expected: ActionsStepRuleJson = {
+      const expected = {
         actions: [],
         enabled: false,
         meta: {
@@ -835,7 +825,7 @@ describe('helpers', () => {
         ],
       };
       const result = formatActionsStepData(mockStepData);
-      const expected: ActionsStepRuleJson = {
+      const expected = {
         actions: [
           {
             group: mockStepData.actions[0].group,
@@ -868,7 +858,7 @@ describe('helpers', () => {
         ],
       };
       const result = formatActionsStepData(mockStepData);
-      const expected: ActionsStepRuleJson = {
+      const expected = {
         actions: [
           {
             group: mockStepData.actions[0].group,
@@ -900,7 +890,7 @@ describe('helpers', () => {
         actions: [mockAction],
       };
       const result = formatActionsStepData(mockStepData);
-      const expected: ActionsStepRuleJson = {
+      const expected = {
         actions: [
           {
             group: mockAction.group,
@@ -934,13 +924,13 @@ describe('helpers', () => {
     });
 
     test('returns rule with type of query when saved_id exists but shouldLoadQueryDynamically=false', () => {
-      const result = formatRule<Rule>(mockDefine, mockAbout, mockSchedule, mockActions);
+      const result = formatRule(mockDefine, mockAbout, mockSchedule, mockActions);
 
       expect(result.type).toEqual('query');
     });
 
     test('returns rule with type of saved_query when saved_id exists and shouldLoadQueryDynamically=true', () => {
-      const result = formatRule<Rule>(
+      const result = formatRule(
         { ...mockDefine, shouldLoadQueryDynamically: true },
         mockAbout,
         mockSchedule,
@@ -958,7 +948,7 @@ describe('helpers', () => {
           saved_id: '',
         },
       };
-      const result = formatRule<CreateRulesSchema>(
+      const result = formatRule(
         mockDefineStepRuleWithoutSavedId,
         mockAbout,
         mockSchedule,
@@ -969,12 +959,7 @@ describe('helpers', () => {
     });
 
     test('returns rule without id if ruleId does not exist', () => {
-      const result = formatRule<CreateRulesSchema>(
-        mockDefine,
-        mockAbout,
-        mockSchedule,
-        mockActions
-      );
+      const result = formatRule(mockDefine, mockAbout, mockSchedule, mockActions);
 
       expect(result).not.toHaveProperty<CreateRulesSchema>('id');
     });

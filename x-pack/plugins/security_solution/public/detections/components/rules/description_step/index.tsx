@@ -62,7 +62,8 @@ const DescriptionListContainer = styled(EuiDescriptionList)`
 
 interface StepRuleDescriptionProps<T> {
   columns?: 'multi' | 'single' | 'singleSplit';
-  data: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>;
   indexPatterns?: DataViewBase;
   schema: FormSchema<T>;
 }
@@ -76,7 +77,7 @@ export const StepRuleDescriptionComponent = <T,>({
   const kibana = useKibana();
   const [filterManager] = useState<FilterManager>(new FilterManager(kibana.services.uiSettings));
 
-  const keys = Object.keys(schema);
+  const keys = Object.keys(data);
   const listItems = keys.reduce((acc: ListItems[], key: string) => {
     if (key === 'machineLearningJobId') {
       return [

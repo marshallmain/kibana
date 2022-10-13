@@ -21,7 +21,6 @@ import { useParams } from 'react-router-dom';
 import { noop } from 'lodash';
 
 import type { DataViewListItem } from '@kbn/data-views-plugin/common';
-import type { UpdateRulesSchema } from '../../../../../../common/detection_engine/schemas/request';
 import { useRule, useUpdateRule } from '../../../../containers/detection_engine/rules';
 import { useListsConfig } from '../../../../containers/detection_engine/lists/use_lists_config';
 import { SecuritySolutionPageWrapper } from '../../../../../common/components/page_wrapper';
@@ -359,13 +358,7 @@ const EditRulePageComponent: FC = () => {
     ) {
       startTransaction({ name: SINGLE_RULE_ACTIONS.SAVE });
       setRule({
-        ...formatRule<UpdateRulesSchema>(
-          define.data,
-          about.data,
-          schedule.data,
-          actions.data,
-          rule?.exceptions_list
-        ),
+        ...formatRule(define.data, about.data, schedule.data, actions.data, rule?.exceptions_list),
         ...(ruleId ? { id: ruleId } : {}),
         ...(rule != null ? { max_signals: rule.max_signals } : {}),
       });

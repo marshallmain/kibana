@@ -5,8 +5,6 @@
  * 2.0.
  */
 
-import type { List } from '@kbn/securitysolution-io-ts-list-types';
-
 import type {
   RiskScoreMapping,
   ThreatIndex,
@@ -16,30 +14,21 @@ import type {
   SeverityMapping,
   Severity,
 } from '@kbn/securitysolution-io-ts-alerting-types';
-import type { DataViewBase, Filter } from '@kbn/es-query';
+import type { DataViewBase } from '@kbn/es-query';
 import type { RuleAction } from '@kbn/alerting-plugin/common';
 import type { DataViewListItem } from '@kbn/data-views-plugin/common';
 
-import type { RuleAlertAction } from '../../../../../common/detection_engine/types';
 import type { FieldValueQueryBar } from '../../../components/rules/query_bar';
 import type { FieldValueTimeline } from '../../../components/rules/pick_timeline';
 import type { FieldValueThreshold } from '../../../components/rules/threshold_input';
 import type {
-  Author,
-  BuildingBlockType,
-  License,
   RelatedIntegrationArray,
   RequiredFieldArray,
-  RuleNameOverride,
   SortOrder,
   SetupGuide,
-  TimestampOverride,
 } from '../../../../../common/detection_engine/schemas/common';
 import type { EqlOptionsSelected } from '../../../../../common/search_strategy';
-import type {
-  RuleResponseAction,
-  ResponseAction,
-} from '../../../../../common/detection_engine/rule_response_actions/schemas';
+import type { RuleResponseAction } from '../../../../../common/detection_engine/rule_response_actions/schemas';
 
 export interface EuiBasicTableSortTypes {
   field: string;
@@ -181,74 +170,7 @@ export interface ActionsStepRule {
   responseActions?: RuleResponseAction[];
   enabled: boolean;
   kibanaSiemAppUrl?: string;
-  throttle?: string | null;
-}
-
-export interface DefineStepRuleJson {
-  anomaly_threshold?: number;
-  index?: string[];
-  filters?: Filter[];
-  machine_learning_job_id?: string[];
-  saved_id?: string;
-  query?: string;
-  data_view_id?: string;
-  language?: string;
-  threshold?: {
-    field: string[];
-    value: number;
-    cardinality: Array<{
-      field: string;
-      value: number;
-    }>;
-  };
-  threat_query?: string;
-  threat_mapping?: ThreatMapping;
-  threat_language?: string;
-  threat_index?: string[];
-  threat_filters?: Filter[];
-  timeline_id?: string;
-  timeline_title?: string;
-  type: Type;
-  timestamp_field?: string;
-  event_category_override?: string;
-  tiebreaker_field?: string;
-}
-
-export interface AboutStepRuleJson {
-  author: Author;
-  building_block_type?: BuildingBlockType;
-  exceptions_list?: List[];
-  name: string;
-  description: string;
-  license: License;
-  severity: string;
-  severity_mapping: SeverityMapping;
-  risk_score: number;
-  risk_score_mapping: RiskScoreMapping;
-  references: string[];
-  false_positives: string[];
-  rule_name_override?: RuleNameOverride;
-  tags: string[];
-  threat: Threats;
-  threat_indicator_path?: string;
-  timestamp_override?: TimestampOverride;
-  timestamp_override_fallback_disabled?: boolean;
-  note?: string;
-}
-
-export interface ScheduleStepRuleJson {
-  interval: string;
-  from: string;
-  to?: string;
-  meta?: unknown;
-}
-
-export interface ActionsStepRuleJson {
-  actions: RuleAlertAction[];
-  response_actions?: ResponseAction[];
-  enabled: boolean;
-  throttle?: string | null;
-  meta?: unknown;
+  throttle?: string;
 }
 
 export interface TimeframePreviewOptions {

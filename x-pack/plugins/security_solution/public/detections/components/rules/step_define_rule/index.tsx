@@ -134,14 +134,14 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
   const [threatIndexModified, setThreatIndexModified] = useState(false);
   const [dataViewTitle, setDataViewTitle] = useState<string>();
 
-  const { form } = useForm<DefineStepRule>({
+  const { form } = useForm({
     defaultValue: initialState,
     options: { stripEmptyFields: false },
     schema,
   });
 
   const { getFields, getFormData, reset, submit } = form;
-  const [formData] = useFormData<DefineStepRule>({
+  const [formData] = useFormData({
     form,
     watch: [
       'index',
@@ -665,7 +665,7 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
     [indexPattern]
   );
 
-  const dataForDescription: Partial<DefineStepRule> = getStepDataDataSource(initialState);
+  const dataForDescription = getStepDataDataSource(initialState);
 
   if (dataSourceType === DataSourceType.DataView) {
     dataForDescription.dataViewTitle = dataViewTitle;
@@ -676,7 +676,7 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
       <StepRuleDescription
         columns={descriptionColumns}
         indexPatterns={indexPattern}
-        schema={filterRuleFieldsForType(schema, ruleType)}
+        schema={schema}
         data={filterRuleFieldsForType(dataForDescription, ruleType)}
       />
     </StepContentWrapper>

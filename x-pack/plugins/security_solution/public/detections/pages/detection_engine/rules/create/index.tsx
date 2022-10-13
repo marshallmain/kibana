@@ -20,7 +20,6 @@ import styled from 'styled-components';
 import type { DataViewListItem } from '@kbn/data-views-plugin/common';
 import { isThreatMatchRule } from '../../../../../../common/detection_engine/utils';
 import { useCreateRule } from '../../../../containers/detection_engine/rules';
-import type { CreateRulesSchema } from '../../../../../../common/detection_engine/schemas/request';
 import { useListsConfig } from '../../../../containers/detection_engine/lists/use_lists_config';
 
 import {
@@ -287,12 +286,7 @@ const CreateRulePageComponent: React.FC = () => {
             stepIsValid(actionsStep)
           ) {
             setRule(
-              formatRule<CreateRulesSchema>(
-                defineStep.data,
-                aboutStep.data,
-                scheduleStep.data,
-                actionsStep.data
-              )
+              formatRule(defineStep.data, aboutStep.data, scheduleStep.data, actionsStep.data)
             );
           }
         }
