@@ -5,19 +5,10 @@
  * 2.0.
  */
 
-import {
-  EuiHorizontalRule,
-  EuiForm,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiButton,
-  EuiSpacer,
-  EuiText,
-  EuiTitle,
-} from '@elastic/eui';
+import { EuiForm, EuiSpacer, EuiText, EuiTitle } from '@elastic/eui';
 import { findIndex } from 'lodash/fp';
 import type { FC } from 'react';
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { memo, useCallback, useMemo, useRef } from 'react';
 import { FormattedMessage } from '@kbn/i18n-react';
 
 import type { ActionVariables } from '@kbn/triggers-actions-ui-plugin/public';
@@ -126,22 +117,12 @@ const StepRuleActionsComponent: FC<StepRuleActionsProps> = ({
     options: { stripEmptyFields: false },
     schema,
   });
-  const { getFields, getFormData, submit } = form;
+  const { getFormData, submit } = form;
   const [{ throttle: formThrottle }] = useFormData<ActionsStepRule>({
     form,
     watch: ['throttle'],
   });
   const throttle = formThrottle || initialState.throttle;
-
-  const handleSubmit = useCallback(
-    (enabled: boolean) => {
-      getFields().enabled.setValue(enabled);
-      if (onSubmit) {
-        onSubmit();
-      }
-    },
-    [getFields, onSubmit]
-  );
 
   const saveClickRef = useRef<{ onSaveClick: () => Promise<boolean> | null }>({
     onSaveClick: () => null,
@@ -164,16 +145,7 @@ const StepRuleActionsComponent: FC<StepRuleActionsProps> = ({
           data: getFormData(),
         };
   }, [getFormData, submit]);
-
-  useEffect(() => {
-    let didCancel = false;
-    if (setForm && !didCancel) {
-      setForm(RuleStep.ruleActions, getData);
-    }
-    return () => {
-      didCancel = true;
-    };
-  }, [getData, setForm]);
+  setForm(RuleStep.ruleActions, getData);
 
   const throttleOptions = useMemo(() => {
     return getThrottleOptions(throttle);
@@ -276,40 +248,6 @@ const StepRuleActionsComponent: FC<StepRuleActionsProps> = ({
           <EuiForm>{displayActionsDropDown}</EuiForm>
         </Form>
       </StepContentWrapper>
-
-      {!isUpdateView && (
-        <>
-          <EuiHorizontalRule margin="m" />
-          <EuiFlexGroup
-            alignItems="center"
-            justifyContent="flexEnd"
-            gutterSize="xs"
-            responsive={false}
-          >
-            <EuiFlexItem grow={false}>
-              <EuiButton
-                fill={false}
-                isDisabled={isLoading}
-                isLoading={isLoading}
-                onClick={() => handleSubmit(false)}
-              >
-                {I18n.COMPLETE_WITHOUT_ENABLING}
-              </EuiButton>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiButton
-                fill
-                isDisabled={isLoading}
-                isLoading={isLoading}
-                onClick={() => handleSubmit(true)}
-                data-test-subj="create-enable"
-              >
-                {I18n.COMPLETE_WITH_ENABLING}
-              </EuiButton>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        </>
-      )}
     </>
   );
 };

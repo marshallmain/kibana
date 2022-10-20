@@ -67,14 +67,16 @@ export interface RuleStepsData {
 }
 
 export type RuleStepsFormData = {
-  [K in keyof RuleStepsData]: {
-    data: RuleStepsData[K] | undefined;
-    isValid: boolean;
-  };
+  [K in keyof RuleStepsData]:
+    | {
+        data: RuleStepsData[K];
+        isValid: boolean;
+      }
+    | undefined;
 };
 
 export type RuleStepsFormHooks = {
-  [K in keyof RuleStepsData]: () => Promise<RuleStepsFormData[K] | undefined>;
+  [K in keyof RuleStepsData]: () => Promise<RuleStepsFormData[K]>;
 };
 
 export interface RuleStepProps {
@@ -85,7 +87,7 @@ export interface RuleStepProps {
   isLoading: boolean;
   onSubmit?: () => void;
   resizeParentContainer?: (height: number) => void;
-  setForm?: <K extends keyof RuleStepsFormHooks>(step: K, hook: RuleStepsFormHooks[K]) => void;
+  setForm: <K extends keyof RuleStepsFormHooks>(step: K, hook: RuleStepsFormHooks[K]) => void;
   kibanaDataViews?: { [x: string]: DataViewListItem };
 }
 

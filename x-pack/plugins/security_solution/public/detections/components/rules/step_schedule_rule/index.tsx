@@ -7,42 +7,57 @@
 
 import type { FC } from 'react';
 import styled from 'styled-components';
-import React, { memo, useCallback, useEffect } from 'react';
+import React, { memo } from 'react';
+import type { Type } from '@kbn/securitysolution-io-ts-alerting-types';
 import type { RuleStepProps, ScheduleStepRule } from '../../../pages/detection_engine/rules/types';
 import { RuleStep } from '../../../pages/detection_engine/rules/types';
 import { StepRuleDescription } from '../description_step';
 import { ScheduleItem } from '../schedule_item_form';
 import { Form, UseField, useForm, useFormData } from '../../../../shared_imports';
 import { StepContentWrapper } from '../step_content_wrapper';
-import { NextStep } from '../next_step';
+import { isThreatMatchRule } from '../../../../../common/detection_engine/utils';
 import { schema } from './schema';
 
 const StyledForm = styled(Form)`
   max-width: 235px !important;
 `;
 interface StepScheduleRuleProps extends RuleStepProps {
-  defaultValues: ScheduleStepRule;
+  ruleType?: Type;
   onRuleDataChange?: (data: ScheduleStepRule) => void;
 }
 
+const DEFAULT_INTERVAL = '5m';
+const DEFAULT_FROM = '1m';
+const THREAT_MATCH_INTERVAL = '1h';
+const THREAT_MATCH_FROM = '5m';
+
+const getStepScheduleDefaultValue = (ruleType: Type | undefined): ScheduleStepRule => {
+  return {
+    interval: isThreatMatchRule(ruleType) ? THREAT_MATCH_INTERVAL : DEFAULT_INTERVAL,
+    from: isThreatMatchRule(ruleType) ? THREAT_MATCH_FROM : DEFAULT_FROM,
+  };
+};
+
 const StepScheduleRuleComponent: FC<StepScheduleRuleProps> = ({
   addPadding = false,
-  defaultValues: initialState,
   descriptionColumns = 'singleSplit',
   isReadOnlyView,
   isLoading,
   isUpdateView = false,
-  onSubmit,
   setForm,
   onRuleDataChange,
+  ruleType,
 }) => {
+  const initialState = getStepScheduleDefaultValue(ruleType);
+
   const { form } = useForm<ScheduleStepRule>({
     defaultValue: initialState,
     options: { stripEmptyFields: false },
     schema,
   });
 
-  const { getFormData, submit } = form;
+  const { submit } = form;
+  setForm(RuleStep.scheduleRule, submit);
 
   useFormData<ScheduleStepRule>({
     form,
@@ -54,39 +69,13 @@ const StepScheduleRuleComponent: FC<StepScheduleRuleProps> = ({
     },
   });
 
-  const handleSubmit = useCallback(() => {
-    if (onSubmit) {
-      onSubmit();
-    }
-  }, [onSubmit]);
-
-  const getData = useCallback(async () => {
-    const result = await submit();
-    return result?.isValid
-      ? result
-      : {
-          isValid: false,
-          data: getFormData(),
-        };
-  }, [getFormData, submit]);
-
-  useEffect(() => {
-    let didCancel = false;
-    if (setForm && !didCancel) {
-      setForm(RuleStep.scheduleRule, getData);
-    }
-    return () => {
-      didCancel = true;
-    };
-  }, [getData, setForm]);
-
-  return isReadOnlyView ? (
-    <StepContentWrapper addPadding={addPadding}>
-      <StepRuleDescription columns={descriptionColumns} schema={schema} data={initialState} />
-    </StepContentWrapper>
-  ) : (
+  return (
     <>
-      <StepContentWrapper addPadding={!isUpdateView}>
+      <StepContentWrapper addPadding={addPadding} display={isReadOnlyView}>
+        <StepRuleDescription columns={descriptionColumns} schema={schema} data={initialState} />
+      </StepContentWrapper>
+
+      <StepContentWrapper addPadding={!isUpdateView} display={!isReadOnlyView}>
         <StyledForm form={form} data-test-subj="stepScheduleRule">
           <UseField
             path="interval"
@@ -110,10 +99,6 @@ const StepScheduleRuleComponent: FC<StepScheduleRuleProps> = ({
           />
         </StyledForm>
       </StepContentWrapper>
-
-      {!isUpdateView && (
-        <NextStep dataTestSubj="schedule-continue" onClick={handleSubmit} isDisabled={isLoading} />
-      )}
     </>
   );
 };

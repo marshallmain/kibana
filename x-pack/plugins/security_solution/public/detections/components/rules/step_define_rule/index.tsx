@@ -27,18 +27,23 @@ import usePrevious from 'react-use/lib/usePrevious';
 import type { SavedQuery } from '@kbn/data-plugin/public';
 import type { DataViewBase } from '@kbn/es-query';
 import { FormattedMessage } from '@kbn/i18n-react';
+import { DEFAULT_INDEX_KEY, DEFAULT_THREAT_INDEX_KEY } from '../../../../../common/constants';
 import { isMlRule } from '../../../../../common/machine_learning/helpers';
 import { hasMlAdminPermissions } from '../../../../../common/machine_learning/has_ml_admin_permissions';
 import { hasMlLicense } from '../../../../../common/machine_learning/has_ml_license';
 import { useMlCapabilities } from '../../../../common/components/ml/hooks/use_ml_capabilities';
-import { useKibana } from '../../../../common/lib/kibana';
+import { useUiSetting$, useKibana } from '../../../../common/lib/kibana';
 import type { EqlOptionsSelected, FieldsEqlOptions } from '../../../../../common/search_strategy';
 import {
   filterRuleFieldsForType,
   getStepDataDataSource,
 } from '../../../pages/detection_engine/rules/create/helpers';
-import type { DefineStepRule, RuleStepProps } from '../../../pages/detection_engine/rules/types';
-import { RuleStep, DataSourceType } from '../../../pages/detection_engine/rules/types';
+import {
+  DefineStepRule,
+  RuleStep,
+  RuleStepProps,
+} from '../../../pages/detection_engine/rules/types';
+import { DataSourceType } from '../../../pages/detection_engine/rules/types';
 import { StepRuleDescription } from '../description_step';
 import type { QueryBarDefineRuleProps } from '../query_bar';
 import { QueryBarDefineRule } from '../query_bar';
@@ -47,7 +52,6 @@ import { AnomalyThresholdSlider } from '../anomaly_threshold_slider';
 import { MlJobSelect } from '../ml_job_select';
 import { PickTimeline } from '../pick_timeline';
 import { StepContentWrapper } from '../step_content_wrapper';
-import { NextStep } from '../next_step';
 import { ThresholdInput } from '../threshold_input';
 import {
   Field,
@@ -75,7 +79,10 @@ import { useFetchIndex } from '../../../../common/containers/source';
 import { NewTermsFields } from '../new_terms_fields';
 import { ScheduleItem } from '../schedule_item_form';
 import { DocLink } from '../../../../common/components/links_to_docs/doc_link';
-import { defaultCustomQuery } from '../../../pages/detection_engine/rules/utils';
+import {
+  defaultCustomQuery,
+  stepDefineDefaultValue,
+} from '../../../pages/detection_engine/rules/utils';
 import { getIsRulePreviewDisabled } from '../rule_preview/helpers';
 
 const CommonUseField = getUseField({ component: Field });
@@ -84,9 +91,6 @@ const StyledVisibleContainer = styled.div<{ isVisible: boolean }>`
   display: ${(props) => (props.isVisible ? 'block' : 'none')};
 `;
 interface StepDefineRuleProps extends RuleStepProps {
-  indicesConfig: string[];
-  threatIndicesConfig: string[];
-  defaultValues: DefineStepRule;
   onRuleDataChange?: (data: DefineStepRule) => void;
   onPreviewDisabledStateChange?: (isDisabled: boolean) => void;
   defaultSavedQuery?: SavedQuery;
@@ -114,16 +118,12 @@ const RuleTypeEuiFormRow = styled(EuiFormRow).attrs<{ $isVisible: boolean }>(({ 
 
 const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
   addPadding = false,
-  defaultValues: initialState,
   descriptionColumns = 'singleSplit',
   isReadOnlyView,
   isLoading,
   isUpdateView = false,
-  onSubmit,
   setForm,
   kibanaDataViews,
-  indicesConfig,
-  threatIndicesConfig,
   onRuleDataChange,
   onPreviewDisabledStateChange,
   defaultSavedQuery,
@@ -134,13 +134,30 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
   const [threatIndexModified, setThreatIndexModified] = useState(false);
   const [dataViewTitle, setDataViewTitle] = useState<string>();
 
+  const [indicesConfig] = useUiSetting$<string[]>(DEFAULT_INDEX_KEY);
+  const [threatIndicesConfig] = useUiSetting$<string[]>(DEFAULT_THREAT_INDEX_KEY);
+  const initialState = {
+    ...stepDefineDefaultValue,
+    index: indicesConfig,
+    threatIndex: threatIndicesConfig,
+  };
+
   const { form } = useForm({
-    defaultValue: initialState,
+    defaultValue: {
+      ...stepDefineDefaultValue,
+      index: indicesConfig,
+      threatIndex: threatIndicesConfig,
+    },
     options: { stripEmptyFields: false },
     schema,
   });
 
-  const { getFields, getFormData, reset, submit } = form;
+  const { getFields, reset, submit } = form;
+  // Pass the submit function back up to the parent component so it can validate form on demand
+  setForm(RuleStep.defineRule, async () => {
+    const result = await submit();
+    return { ...result, data: { ...result.data, eqlOptions: optionsSelected } };
+  });
   const [formData] = useFormData({
     form,
     watch: [
@@ -304,6 +321,7 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
 
   // reset form when rule type changes
   useEffect(() => {
+    console.log(`resetting form`);
     reset({ resetValues: false });
   }, [reset, ruleType]);
 
@@ -374,39 +392,6 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
     }
   }, [isQueryBarValid, form]);
 
-  const handleSubmit = useCallback(() => {
-    if (onSubmit) {
-      onSubmit();
-    }
-  }, [onSubmit]);
-
-  const getData = useCallback(async () => {
-    const result = await submit();
-    result.data = {
-      ...result.data,
-      eqlOptions: optionsSelected,
-    };
-    return result.isValid
-      ? result
-      : {
-          isValid: false,
-          data: {
-            ...getFormData(),
-            eqlOptions: optionsSelected,
-          },
-        };
-  }, [getFormData, optionsSelected, submit]);
-
-  useEffect(() => {
-    let didCancel = false;
-    if (setForm && !didCancel) {
-      setForm(RuleStep.defineRule, getData);
-    }
-    return () => {
-      didCancel = true;
-    };
-  }, [getData, setForm]);
-
   const handleResetIndices = useCallback(() => {
     const indexField = getFields().index;
     indexField.setValue(indicesConfig);
@@ -437,11 +422,6 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
     ),
     [aggFields]
   );
-  const SourcererFlex = styled(EuiFlexItem)`
-    align-items: flex-end;
-  `;
-
-  SourcererFlex.displayName = 'SourcererFlex';
 
   const ThreatMatchInputChildren = useCallback(
     ({ threatMapping }) => (
@@ -665,24 +645,28 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
     [indexPattern]
   );
 
-  const dataForDescription = getStepDataDataSource(initialState);
+  const dataForDescription = getStepDataDataSource(formData);
 
   if (dataSourceType === DataSourceType.DataView) {
     dataForDescription.dataViewTitle = dataViewTitle;
   }
 
-  return isReadOnlyView ? (
-    <StepContentWrapper data-test-subj="definitionRule" addPadding={addPadding}>
-      <StepRuleDescription
-        columns={descriptionColumns}
-        indexPatterns={indexPattern}
-        schema={schema}
-        data={filterRuleFieldsForType(dataForDescription, ruleType)}
-      />
-    </StepContentWrapper>
-  ) : (
+  return (
     <>
-      <StepContentWrapper addPadding={!isUpdateView}>
+      <StepContentWrapper
+        data-test-subj="definitionRule"
+        addPadding={addPadding}
+        display={isReadOnlyView}
+      >
+        <StepRuleDescription
+          columns={descriptionColumns}
+          indexPatterns={indexPattern}
+          schema={schema}
+          data={filterRuleFieldsForType(dataForDescription, ruleType)}
+        />
+      </StepContentWrapper>
+
+      <StepContentWrapper addPadding={!isUpdateView} display={!isReadOnlyView}>
         <Form form={form} data-test-subj="stepDefineRule">
           <StyledVisibleContainer isVisible={false}>
             <UseField
@@ -861,10 +845,6 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
           />
         </Form>
       </StepContentWrapper>
-
-      {!isUpdateView && (
-        <NextStep dataTestSubj="define-continue" onClick={handleSubmit} isDisabled={isLoading} />
-      )}
     </>
   );
 };

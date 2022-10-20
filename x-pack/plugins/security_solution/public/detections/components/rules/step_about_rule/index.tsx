@@ -7,7 +7,7 @@
 
 import { EuiAccordion, EuiFlexItem, EuiSpacer, EuiFormRow } from '@elastic/eui';
 import type { FC } from 'react';
-import React, { memo, useCallback, useEffect, useState, useMemo } from 'react';
+import React, { memo, useEffect, useState, useMemo } from 'react';
 import styled from 'styled-components';
 
 import type { DataViewBase } from '@kbn/es-query';
@@ -32,11 +32,11 @@ import {
 } from '../../../../shared_imports';
 
 import { defaultRiskScoreBySeverity, severityOptions } from './data';
+import { stepAboutDefaultValue } from './default_value';
 import { isUrlInvalid } from '../../../../common/utils/validators';
 import { schema as defaultSchema, threatIndicatorPathRequiredSchemaValue } from './schema';
 import * as I18n from './translations';
 import { StepContentWrapper } from '../step_content_wrapper';
-import { NextStep } from '../next_step';
 import { MarkdownEditorForm } from '../../../../common/components/markdown_editor/eui_form';
 import { SeverityField } from '../severity_mapping';
 import { RiskScoreField } from '../risk_score_mapping';
@@ -49,16 +49,9 @@ import { useRuleIndices } from '../../../containers/detection_engine/rules/use_r
 const CommonUseField = getUseField({ component: Field });
 
 interface StepAboutRuleProps extends RuleStepProps {
-  defaultValues: AboutStepRule;
   defineRuleData?: DefineStepRule;
   onRuleDataChange?: (data: AboutStepRule) => void;
 }
-
-const ThreeQuartersContainer = styled.div`
-  max-width: 740px;
-`;
-
-ThreeQuartersContainer.displayName = 'ThreeQuartersContainer';
 
 const TagContainer = styled.div`
   margin-top: 16px;
@@ -68,32 +61,23 @@ TagContainer.displayName = 'TagContainer';
 
 const StepAboutRuleComponent: FC<StepAboutRuleProps> = ({
   addPadding = false,
-  defaultValues: initialState,
   defineRuleData,
   descriptionColumns = 'singleSplit',
   isReadOnlyView,
   isUpdateView = false,
   isLoading,
-  onSubmit,
   setForm,
   onRuleDataChange,
 }) => {
   const { data } = useKibana().services;
 
-  const isThreatMatchRuleValue = useMemo(
-    () => isThreatMatchRule(defineRuleData?.ruleType),
-    [defineRuleData]
-  );
+  const isThreatMatchRuleValue = isThreatMatchRule(defineRuleData?.ruleType);
 
-  const schema = useMemo(
-    () =>
-      isThreatMatchRuleValue
-        ? { ...defaultSchema, threatIndicatorPath: threatIndicatorPathRequiredSchemaValue }
-        : defaultSchema,
-    [isThreatMatchRuleValue]
-  );
+  const schema = isThreatMatchRuleValue
+    ? { ...defaultSchema, threatIndicatorPath: threatIndicatorPathRequiredSchemaValue }
+    : defaultSchema;
 
-  const [severityValue, setSeverityValue] = useState<string>(initialState.severity.value);
+  const [severityValue, setSeverityValue] = useState<string>(stepAboutDefaultValue.severity.value);
 
   const { ruleIndices } = useRuleIndices(
     defineRuleData?.machineLearningJobId,
@@ -130,38 +114,60 @@ const StepAboutRuleComponent: FC<StepAboutRuleProps> = ({
     fetchSingleDataView();
   }, [data.dataViews, defineRuleData, indexIndexPattern, setIndexPattern]);
 
+  const defaultValue = useMemo(
+    () =>
+      isThreatMatchRuleValue
+        ? { ...stepAboutDefaultValue, threatIndicatorPath: DEFAULT_INDICATOR_SOURCE_PATH }
+        : stepAboutDefaultValue,
+    [isThreatMatchRuleValue]
+  );
+
   const { form } = useForm<AboutStepRule>({
-    defaultValue: initialState,
+    defaultValue,
     options: { stripEmptyFields: false },
     schema,
   });
-  const { getFields, getFormData, submit } = form;
-  const [{ severity: formSeverity, timestampOverride: formTimestampOverride }] =
-    useFormData<AboutStepRule>({
-      form,
-      watch: [
-        'isAssociatedToEndpointList',
-        'isBuildingBlock',
-        'riskScore',
-        'ruleNameOverride',
-        'severity',
-        'timestampOverride',
-        'threat',
-        'timestampOverrideFallbackDisabled',
-      ],
-      onChange: (aboutData: AboutStepRule) => {
-        if (onRuleDataChange) {
-          onRuleDataChange({
-            threatIndicatorPath: undefined,
-            timestampOverrideFallbackDisabled: undefined,
-            ...aboutData,
-          });
-        }
+  const { getFields, submit } = form;
+  setForm(RuleStep.aboutRule, async () => {
+    const result = await submit();
+    console.log(JSON.stringify(result));
+    return {
+      ...result,
+      data: {
+        threatIndicatorPath: undefined,
+        timestampOverrideFallbackDisabled: undefined,
+        ...result.data,
       },
-    });
+    };
+  });
+  const [formData] = useFormData<AboutStepRule>({
+    form,
+    watch: [
+      'name',
+      'description',
+      'isAssociatedToEndpointList',
+      'isBuildingBlock',
+      'riskScore',
+      'ruleNameOverride',
+      'severity',
+      'timestampOverride',
+      'threat',
+      'timestampOverrideFallbackDisabled',
+    ],
+    onChange: (aboutData: AboutStepRule) => {
+      if (onRuleDataChange) {
+        onRuleDataChange({
+          threatIndicatorPath: undefined,
+          timestampOverrideFallbackDisabled: undefined,
+          ...aboutData,
+        });
+      }
+    },
+  });
 
+  // When severity changes, update the risk score to a different default value
   useEffect(() => {
-    const formSeverityValue = formSeverity?.value;
+    const formSeverityValue = formData.severity?.value;
     if (formSeverityValue != null && formSeverityValue !== severityValue) {
       setSeverityValue(formSeverityValue);
 
@@ -171,48 +177,27 @@ const StepAboutRuleComponent: FC<StepAboutRuleProps> = ({
         riskScoreField.setValue({ ...riskScoreField.value, value: newRiskScoreValue });
       }
     }
-  }, [formSeverity?.value, getFields, severityValue]);
+  }, [formData.severity?.value, getFields, severityValue]);
 
-  const getData = useCallback(async () => {
-    const result = await submit();
-    return result?.isValid
-      ? {
-          isValid: true,
-          data: {
-            threatIndicatorPath: undefined,
-            timestampOverrideFallbackDisabled: undefined,
-            ...result.data,
-          },
-        }
-      : {
-          isValid: false,
-          data: getFormData(),
-        };
-  }, [getFormData, submit]);
-
-  const handleSubmit = useCallback(() => {
-    if (onSubmit) {
-      onSubmit();
-    }
-  }, [onSubmit]);
-
+  console.log('rendering stepAboutRule');
   useEffect(() => {
-    let didCancel = false;
-    if (setForm && !didCancel) {
-      setForm(RuleStep.aboutRule, getData);
-    }
+    console.log('mounting stepAboutRule');
     return () => {
-      didCancel = true;
+      console.log('unmounting stepAboutRule');
     };
-  }, [getData, setForm]);
+  }, []);
 
-  return isReadOnlyView ? (
-    <StepContentWrapper data-test-subj="aboutStep" addPadding={addPadding}>
-      <StepRuleDescription columns={descriptionColumns} schema={schema} data={initialState} />
-    </StepContentWrapper>
-  ) : (
+  return (
     <>
-      <StepContentWrapper addPadding={!isUpdateView}>
+      <StepContentWrapper
+        data-test-subj="aboutStep"
+        addPadding={addPadding}
+        display={isReadOnlyView}
+      >
+        <StepRuleDescription columns={descriptionColumns} schema={schema} data={formData} />
+      </StepContentWrapper>
+
+      <StepContentWrapper addPadding={!isUpdateView} display={!isReadOnlyView}>
         <Form form={form}>
           <CommonUseField
             path="name"
@@ -421,7 +406,7 @@ const StepAboutRuleComponent: FC<StepAboutRuleProps> = ({
                 placeholder: '',
               }}
             />
-            {!!formTimestampOverride && formTimestampOverride !== '@timestamp' && (
+            {!!formData.timestampOverride && formData.timestampOverride !== '@timestamp' && (
               <>
                 <CommonUseField
                   path="timestampOverrideFallbackDisabled"
@@ -438,10 +423,6 @@ const StepAboutRuleComponent: FC<StepAboutRuleProps> = ({
           </EuiAccordion>
         </Form>
       </StepContentWrapper>
-
-      {!isUpdateView && (
-        <NextStep dataTestSubj="about-continue" onClick={handleSubmit} isDisabled={isLoading} />
-      )}
     </>
   );
 };
