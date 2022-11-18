@@ -32,7 +32,7 @@ export interface RulesFeatureTourContextType {
   actions: EuiTourActions;
 }
 
-export const SEARCH_CAPABILITIES_TOUR_ANCHOR = 'search-capabilities-tour-anchor';
+export const NEW_RULE_CAPABILITIES_TOUR_ANCHOR = 'new-rule-capabilities-tour-anchor';
 
 const TOUR_STORAGE_KEY = NEW_FEATURES_TOUR_STORAGE_KEYS.RULE_MANAGEMENT_PAGE;
 const TOUR_POPOVER_WIDTH = 400;
@@ -83,7 +83,7 @@ export const RulesFeatureTour: FC = () => {
      * show up on the page.
      */
     const observer = new MutationObserver(() => {
-      if (document.querySelector(`#${SEARCH_CAPABILITIES_TOUR_ANCHOR}`)) {
+      if (document.querySelector(`#${NEW_RULE_CAPABILITIES_TOUR_ANCHOR}`)) {
         setShouldShowSearchCapabilitiesTour(true);
         observer.disconnect();
       }
@@ -144,7 +144,7 @@ export const RulesFeatureTour: FC = () => {
        */
       // eslint-disable-next-line react/no-children-prop
       children={undefined}
-      anchor={`#${SEARCH_CAPABILITIES_TOUR_ANCHOR}`}
+      anchor={`#${NEW_RULE_CAPABILITIES_TOUR_ANCHOR}`}
       anchorPosition="downCenter"
     />
   ) : null;

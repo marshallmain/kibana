@@ -41,6 +41,7 @@ import { AllRules } from '../../components/rules_table';
 import { RulesTableContextProvider } from '../../components/rules_table/rules_table/rules_table_context';
 
 import * as i18n from '../../../../detections/pages/detection_engine/rules/translations';
+import { NEW_RULE_CAPABILITIES_TOUR_ANCHOR } from '../../components/rules_table/feature_tour/rules_feature_tour';
 
 const RulesPageComponent: React.FC = () => {
   const [isImportModalVisible, showImportModal, hideImportModal] = useBoolState();
@@ -142,6 +143,7 @@ const RulesPageComponent: React.FC = () => {
               </EuiFlexItem>
               <EuiFlexItem grow={false}>
                 <SecuritySolutionLinkButton
+                  id={NEW_RULE_CAPABILITIES_TOUR_ANCHOR}
                   data-test-subj="create-new-rule"
                   fill
                   iconType="plusInCircle"

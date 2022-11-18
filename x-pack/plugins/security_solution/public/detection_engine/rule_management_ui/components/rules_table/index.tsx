@@ -7,6 +7,7 @@
 
 import { EuiSpacer } from '@elastic/eui';
 import React, { useState } from 'react';
+import { RulesFeatureTour } from './feature_tour/rules_feature_tour';
 import { RulesManagementTour } from './rules_table/guided_onboarding/rules_management_tour';
 import { RulesTables } from './rules_tables';
 import { AllRulesTabs, RulesTableToolbar } from './rules_table_toolbar';
@@ -24,6 +25,7 @@ export const AllRules = React.memo(() => {
 
   return (
     <>
+      <RulesFeatureTour />
       <RulesManagementTour />
       <RulesTableToolbar activeTab={activeTab} onTabChange={setActiveTab} />
       <EuiSpacer />
