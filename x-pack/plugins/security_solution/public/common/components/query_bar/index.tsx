@@ -26,7 +26,6 @@ export interface QueryBarComponentProps {
   isRefreshPaused?: boolean;
   filterQuery: Query;
   filterManager: FilterManager;
-  filters: Filter[];
   onChangedQuery?: (query: Query) => void;
   onSubmitQuery: (query: Query, timefilter?: SavedQueryTimeFilter) => void;
   refreshInterval?: number;
@@ -46,7 +45,6 @@ export const QueryBar = memo<QueryBarComponentProps>(
     isRefreshPaused,
     filterQuery,
     filterManager,
-    filters,
     onChangedQuery,
     onSubmitQuery,
     refreshInterval,
@@ -110,7 +108,7 @@ export const QueryBar = memo<QueryBarComponentProps>(
         showSubmitButton={false}
         dateRangeFrom={dateRangeFrom}
         dateRangeTo={dateRangeTo}
-        filters={filters}
+        filters={filterManager.getFilters() || []}
         indexPatterns={indexPatterns as DataView[]}
         isLoading={isLoading}
         isRefreshPaused={isRefreshPaused}
