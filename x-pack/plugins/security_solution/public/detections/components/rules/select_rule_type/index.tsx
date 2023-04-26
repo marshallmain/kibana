@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { EuiCard, EuiFlexGrid, EuiFlexItem, EuiFormRow, EuiIcon } from '@elastic/eui';
 
 import type { Type } from '@kbn/securitysolution-io-ts-alerting-types';
@@ -29,6 +29,15 @@ interface SelectRuleTypeProps {
   isUpdateView: boolean;
 }
 
+const queryIcon = <EuiIcon size="xl" type="search" />;
+const mlIcon = <EuiIcon size="l" type="machineLearningApp" />;
+const thresholdIcon = <EuiIcon size="l" type="indexFlush" />;
+const eqlIcon = <EuiIcon size="l" type="eql" />;
+const threatMatchIcon = <EuiIcon size="l" type="list" />;
+const newTermsIcon = <EuiIcon size="l" type="magnifyWithPlus" />;
+
+const MemoEuiCard = memo(EuiCard);
+
 export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
   describedByIds = [],
   field,
@@ -37,11 +46,12 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
   isMlAdmin,
 }) => {
   const ruleType = field.value as Type;
+  const fieldSetValue = field.setValue;
   const setType = useCallback(
     (type: Type) => {
-      field.setValue(type);
+      fieldSetValue(type);
     },
-    [field]
+    [fieldSetValue]
   );
   const setEql = useCallback(() => setType('eql'), [setType]);
   const setMl = useCallback(() => setType('machine_learning'), [setType]);
@@ -99,6 +109,10 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
     [ruleType, setNewTerms]
   );
 
+  const mlCardDescription = useMemo(() => {
+    return <MlCardDescription hasValidLicense={hasValidLicense} />;
+  }, [hasValidLicense]);
+
   return (
     <EuiFormRow
       fullWidth
@@ -109,12 +123,12 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
       <EuiFlexGrid columns={3}>
         {(!isUpdateView || querySelectableConfig.isSelected) && (
           <EuiFlexItem>
-            <EuiCard
+            <MemoEuiCard
               data-test-subj="customRuleType"
               title={i18n.QUERY_TYPE_TITLE}
               titleSize="xs"
               description={i18n.QUERY_TYPE_DESCRIPTION}
-              icon={<EuiIcon size="xl" type="search" />}
+              icon={queryIcon}
               selectable={querySelectableConfig}
               layout="horizontal"
             />
@@ -122,12 +136,12 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
         )}
         {(!isUpdateView || mlSelectableConfig.isSelected) && (
           <EuiFlexItem>
-            <EuiCard
+            <MemoEuiCard
               data-test-subj="machineLearningRuleType"
               title={i18n.ML_TYPE_TITLE}
               titleSize="xs"
-              description={<MlCardDescription hasValidLicense={hasValidLicense} />}
-              icon={<EuiIcon size="l" type="machineLearningApp" />}
+              description={mlCardDescription}
+              icon={mlIcon}
               isDisabled={mlSelectableConfig.isDisabled && !mlSelectableConfig.isSelected}
               selectable={mlSelectableConfig}
               layout="horizontal"
@@ -136,12 +150,12 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
         )}
         {(!isUpdateView || thresholdSelectableConfig.isSelected) && (
           <EuiFlexItem>
-            <EuiCard
+            <MemoEuiCard
               data-test-subj="thresholdRuleType"
               title={i18n.THRESHOLD_TYPE_TITLE}
               titleSize="xs"
               description={i18n.THRESHOLD_TYPE_DESCRIPTION}
-              icon={<EuiIcon size="l" type="indexFlush" />}
+              icon={thresholdIcon}
               selectable={thresholdSelectableConfig}
               layout="horizontal"
             />
@@ -149,12 +163,12 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
         )}
         {(!isUpdateView || eqlSelectableConfig.isSelected) && (
           <EuiFlexItem>
-            <EuiCard
+            <MemoEuiCard
               data-test-subj="eqlRuleType"
               title={i18n.EQL_TYPE_TITLE}
               titleSize="xs"
               description={i18n.EQL_TYPE_DESCRIPTION}
-              icon={<EuiIcon size="l" type="eql" />}
+              icon={eqlIcon}
               selectable={eqlSelectableConfig}
               layout="horizontal"
             />
@@ -162,12 +176,12 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
         )}
         {(!isUpdateView || threatMatchSelectableConfig.isSelected) && (
           <EuiFlexItem>
-            <EuiCard
+            <MemoEuiCard
               data-test-subj="threatMatchRuleType"
               title={i18n.THREAT_MATCH_TYPE_TITLE}
               titleSize="xs"
               description={i18n.THREAT_MATCH_TYPE_DESCRIPTION}
-              icon={<EuiIcon size="l" type="list" />}
+              icon={threatMatchIcon}
               selectable={threatMatchSelectableConfig}
               layout="horizontal"
             />
@@ -175,12 +189,12 @@ export const SelectRuleType: React.FC<SelectRuleTypeProps> = ({
         )}
         {(!isUpdateView || newTermsSelectableConfig.isSelected) && (
           <EuiFlexItem>
-            <EuiCard
+            <MemoEuiCard
               data-test-subj="newTermsRuleType"
               title={i18n.NEW_TERMS_TYPE_TITLE}
               titleSize="xs"
               description={i18n.NEW_TERMS_TYPE_DESCRIPTION}
-              icon={<EuiIcon size="l" type="magnifyWithPlus" />}
+              icon={newTermsIcon}
               selectable={newTermsSelectableConfig}
               layout="horizontal"
             />
