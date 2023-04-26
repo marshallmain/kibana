@@ -9,7 +9,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { EuiFlexGroup, EuiFlexItem, EuiSpacer, EuiFormRow } from '@elastic/eui';
 import type { DataViewBase } from '@kbn/es-query';
 import type { ThreatMapEntries } from '../../../../common/components/threat_match/types';
-import { ThreatMatchComponent } from '../../../../common/components/threat_match';
+import { ThreatMatch } from '../../../../common/components/threat_match';
 import type { BrowserField } from '../../../../common/containers/source';
 import type { FieldHook } from '../../../../shared_imports';
 import {
@@ -122,7 +122,7 @@ const ThreatMatchInputComponent: React.FC<ThreatMatchInputProps> = ({
         isInvalid={isThreatMappingInvalid}
         fullWidth
       >
-        <ThreatMatchComponent
+        <ThreatMatch
           listItems={threatItems as ThreatMapEntries[]}
           indexPatterns={indexPatterns}
           threatIndexPatterns={threatIndexPatterns}

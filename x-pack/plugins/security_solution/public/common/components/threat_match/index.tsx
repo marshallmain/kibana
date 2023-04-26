@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { useCallback, useEffect, useReducer } from 'react';
+import React, { memo, useCallback, useEffect, useReducer } from 'react';
 import { EuiFlexGroup, EuiFlexItem } from '@elastic/eui';
 import styled from 'styled-components';
 import type { DataViewBase } from '@kbn/es-query';
@@ -50,7 +50,7 @@ interface ThreatMatchComponentProps {
   onChange: (arg: OnChangeProps) => void;
 }
 
-export const ThreatMatchComponent = ({
+const ThreatMatchComponent = ({
   listItems,
   indexPatterns,
   threatIndexPatterns,
@@ -221,4 +221,4 @@ export const ThreatMatchComponent = ({
   );
 };
 
-ThreatMatchComponent.displayName = 'ThreatMatch';
+export const ThreatMatch = memo(ThreatMatchComponent);
