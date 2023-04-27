@@ -79,7 +79,7 @@ import {
 } from '../../../../../common/detection_engine/utils';
 import { EqlQueryBar } from '../eql_query_bar';
 import { DataViewSelector } from '../data_view_selector';
-import { ThreatMatchInput } from '../threatmatch_input';
+import { ThreatMatchInputWrapper } from '../threatmatch_input';
 import type { BrowserField } from '../../../../common/containers/source';
 import { useFetchIndex } from '../../../../common/containers/source';
 import { NewTermsFields } from '../new_terms_fields';
@@ -499,29 +499,6 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
       />
     ),
     [aggFields]
-  );
-
-  const ThreatMatchInputChildren = useCallback(
-    ({ threatMapping }) => (
-      <ThreatMatchInput
-        handleResetThreatIndices={handleResetThreatIndices}
-        indexPatterns={indexPattern}
-        threatBrowserFields={threatBrowserFields}
-        threatIndexModified={threatIndexModified}
-        threatIndexPatterns={threatIndexPatterns}
-        threatIndexPatternsLoading={threatIndexPatternsLoading}
-        threatMapping={threatMapping}
-        onValidityChange={setIsThreatQueryBarValid}
-      />
-    ),
-    [
-      handleResetThreatIndices,
-      indexPattern,
-      threatBrowserFields,
-      threatIndexModified,
-      threatIndexPatterns,
-      threatIndexPatternsLoading,
-    ]
   );
 
   const GroupByChildren = useCallback(
@@ -1014,15 +991,19 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
             fullWidth
           >
             <>
-              <UseMultiFields
-                fields={{
-                  threatMapping: {
-                    path: 'threatMapping',
-                  },
+              <UseField
+                path="threatMapping"
+                component={ThreatMatchInputWrapper}
+                componentProps={{
+                  handleResetThreatIndices,
+                  indexPatterns: indexPattern,
+                  threatBrowserFields,
+                  threatIndexModified,
+                  threatIndexPatterns,
+                  threatIndexPatternsLoading,
+                  onValidityChange: setIsThreatQueryBarValid,
                 }}
-              >
-                {ThreatMatchInputChildren}
-              </UseMultiFields>
+              />
             </>
           </RuleTypeEuiFormRow>
           <RuleTypeEuiFormRow

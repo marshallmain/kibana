@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { EuiFlexGroup, EuiFlexItem, EuiSpacer, EuiFormRow } from '@elastic/eui';
 import type { DataViewBase } from '@kbn/es-query';
 import type { ThreatMapEntries } from '../../../../common/components/threat_match/types';
@@ -26,8 +26,8 @@ import { MyLabelButton } from '../step_define_rule';
 
 const CommonUseField = getUseField({ component: Field });
 
-interface ThreatMatchInputProps {
-  threatMapping: FieldHook;
+interface ThreatMatchInputWrapperProps {
+  field: FieldHook;
   threatBrowserFields: Readonly<Record<string, Partial<BrowserField>>>;
   threatIndexPatterns: DataViewBase;
   indexPatterns: DataViewBase;
@@ -37,20 +37,80 @@ interface ThreatMatchInputProps {
   onValidityChange?: (isValid: boolean) => void;
 }
 
+interface ThreatMatchInputProps {
+  fieldValue: ThreatMapEntries[];
+  setFieldValue: (value: unknown) => void;
+  fieldLabel: string | undefined;
+  isChangingValue: FieldHook['isChangingValue'];
+  errors: FieldHook['errors'];
+  threatBrowserFields: Readonly<Record<string, Partial<BrowserField>>>;
+  threatIndexPatterns: DataViewBase;
+  indexPatterns: DataViewBase;
+  threatIndexPatternsLoading: boolean;
+  threatIndexModified: boolean;
+  handleResetThreatIndices: () => void;
+  onValidityChange?: (isValid: boolean) => void;
+}
+
+const threatIndexComponentProps = {
+  idAria: 'detectionEngineStepDefineRuleThreatMatchIndices',
+  'data-test-subj': 'detectionEngineStepDefineRuleThreatMatchIndices',
+  euiFieldProps: {
+    fullWidth: true,
+    isDisabled: false,
+    placeholder: '',
+  },
+};
+
+const threatQueryConfig = {
+  ...schema.threatQueryBar,
+  labelAppend: null,
+};
+
+export const ThreatMatchInputWrapper: React.FC<ThreatMatchInputWrapperProps> = ({
+  threatIndexModified,
+  handleResetThreatIndices,
+  field,
+  indexPatterns,
+  threatIndexPatterns,
+  threatIndexPatternsLoading,
+  threatBrowserFields,
+  onValidityChange,
+}) => (
+  <ThreatMatchInput
+    threatIndexModified={threatIndexModified}
+    handleResetThreatIndices={handleResetThreatIndices}
+    fieldValue={field.value as ThreatMapEntries[]}
+    setFieldValue={field.setValue}
+    fieldLabel={field.label}
+    isChangingValue={field.isChangingValue}
+    errors={field.errors}
+    indexPatterns={indexPatterns}
+    threatIndexPatterns={threatIndexPatterns}
+    threatIndexPatternsLoading={threatIndexPatternsLoading}
+    threatBrowserFields={threatBrowserFields}
+    onValidityChange={onValidityChange}
+  />
+);
+
 const ThreatMatchInputComponent: React.FC<ThreatMatchInputProps> = ({
   threatIndexModified,
   handleResetThreatIndices,
-  threatMapping,
+  fieldValue,
+  setFieldValue,
+  fieldLabel,
+  isChangingValue,
+  errors,
   indexPatterns,
   threatIndexPatterns,
   threatIndexPatternsLoading,
   threatBrowserFields,
   onValidityChange,
 }: ThreatMatchInputProps) => {
-  const { setValue, value: threatItems } = threatMapping;
-
-  const { isInvalid: isThreatMappingInvalid, errorMessage } =
-    getFieldValidityAndErrorMessage(threatMapping);
+  const { isInvalid: isThreatMappingInvalid, errorMessage } = getFieldValidityAndErrorMessage({
+    errors,
+    isChangingValue,
+  });
   const [isThreatIndexPatternValid, setIsThreatIndexPatternValid] = useState(false);
 
   useEffect(() => {
@@ -61,9 +121,35 @@ const ThreatMatchInputComponent: React.FC<ThreatMatchInputProps> = ({
 
   const handleBuilderOnChange = useCallback(
     ({ entryItems }: { entryItems: ThreatMapEntries[] }): void => {
-      setValue(entryItems);
+      setFieldValue(entryItems);
     },
-    [setValue]
+    [setFieldValue]
+  );
+
+  const threatIndexConfig = useMemo(
+    () => ({
+      ...schema.threatIndex,
+      labelAppend: threatIndexModified ? (
+        <MyLabelButton onClick={handleResetThreatIndices} iconType="refresh">
+          {i18n.RESET_DEFAULT_INDEX}
+        </MyLabelButton>
+      ) : null,
+    }),
+    [handleResetThreatIndices, threatIndexModified]
+  );
+
+  const threatQueryComponentProps = useMemo(
+    () => ({
+      browserFields: threatBrowserFields,
+      idAria: 'detectionEngineStepDefineThreatRuleQueryBar',
+      indexPattern: threatIndexPatterns,
+      isDisabled: false,
+      isLoading: threatIndexPatternsLoading,
+      dataTestSubj: 'detectionEngineStepDefineThreatRuleQueryBar',
+      openTimelineSearch: false,
+      onValidityChange: setIsThreatIndexPatternValid,
+    }),
+    [threatBrowserFields, threatIndexPatterns, threatIndexPatternsLoading]
   );
 
   return (
@@ -73,57 +159,28 @@ const ThreatMatchInputComponent: React.FC<ThreatMatchInputProps> = ({
         <EuiFlexItem grow={true}>
           <CommonUseField<string[], DefineStepRule>
             path="threatIndex"
-            config={{
-              ...schema.threatIndex,
-              labelAppend: threatIndexModified ? (
-                <MyLabelButton onClick={handleResetThreatIndices} iconType="refresh">
-                  {i18n.RESET_DEFAULT_INDEX}
-                </MyLabelButton>
-              ) : null,
-            }}
-            componentProps={{
-              idAria: 'detectionEngineStepDefineRuleThreatMatchIndices',
-              'data-test-subj': 'detectionEngineStepDefineRuleThreatMatchIndices',
-              euiFieldProps: {
-                fullWidth: true,
-                isDisabled: false,
-                placeholder: '',
-              },
-            }}
+            config={threatIndexConfig}
+            componentProps={threatIndexComponentProps}
           />
         </EuiFlexItem>
         <EuiFlexItem grow={true}>
           <UseField
             path="threatQueryBar"
-            config={{
-              ...schema.threatQueryBar,
-              labelAppend: null,
-            }}
+            config={threatQueryConfig}
             component={QueryBarDefineRule}
-            componentProps={{
-              browserFields: threatBrowserFields,
-              idAria: 'detectionEngineStepDefineThreatRuleQueryBar',
-              indexPattern: threatIndexPatterns,
-              isDisabled: false,
-              isLoading: threatIndexPatternsLoading,
-              dataTestSubj: 'detectionEngineStepDefineThreatRuleQueryBar',
-              openTimelineSearch: false,
-              onValidityChange: setIsThreatIndexPatternValid,
-            }}
+            componentProps={threatQueryComponentProps}
           />
         </EuiFlexItem>
       </EuiFlexGroup>
       <EuiSpacer size="m" />
       <EuiFormRow
-        label={threatMapping.label}
-        labelAppend={threatMapping.labelAppend}
-        helpText={threatMapping.helpText}
+        label={fieldLabel}
         error={errorMessage}
         isInvalid={isThreatMappingInvalid}
         fullWidth
       >
         <ThreatMatch
-          listItems={threatItems as ThreatMapEntries[]}
+          listItems={fieldValue}
           indexPatterns={indexPatterns}
           threatIndexPatterns={threatIndexPatterns}
           data-test-subj="threatmatch-builder"
@@ -136,4 +193,4 @@ const ThreatMatchInputComponent: React.FC<ThreatMatchInputProps> = ({
   );
 };
 
-export const ThreatMatchInput = React.memo(ThreatMatchInputComponent);
+const ThreatMatchInput = React.memo(ThreatMatchInputComponent);
