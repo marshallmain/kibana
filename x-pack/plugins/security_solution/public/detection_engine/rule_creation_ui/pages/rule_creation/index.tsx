@@ -15,7 +15,9 @@ import {
   EuiFlexGroup,
   EuiResizableContainer,
 } from '@elastic/eui';
-import React, { useCallback, useRef, useState, useMemo, useEffect } from 'react';
+
+import type { EuiResizableContainerActions } from '@elastic/eui/src/components/resizable_container/types';
+import React, { useCallback, useRef, useState, useMemo, useEffect, memo } from 'react';
 import styled from 'styled-components';
 
 import type { DataViewListItem } from '@kbn/data-views-plugin/common';
@@ -71,6 +73,7 @@ import {
 } from '../../../../../common/constants';
 import { useKibana, useUiSetting$ } from '../../../../common/lib/kibana';
 import { HeaderPage } from '../../../../common/components/header_page';
+import type { HeaderPageProps } from '../../../../common/components/header_page';
 import { RulePreview } from '../../../../detections/components/rules/rule_preview';
 import { useStartMlJobs } from '../../../rule_management/logic/use_start_ml_jobs';
 
@@ -364,6 +367,16 @@ const CreateRulePageComponent: React.FC = () => {
     />
   );
 
+  const rulesUrl = getRulesUrl();
+  const backOptions = useMemo(
+    () => ({
+      path: rulesUrl,
+      text: i18n.BACK_TO_RULES,
+      pageId: SecurityPageName.rules,
+    }),
+    [rulesUrl]
+  );
+
   if (
     redirectToDetections(
       isSignalIndexExists,
@@ -396,28 +409,14 @@ const CreateRulePageComponent: React.FC = () => {
                 <EuiResizablePanel initialSize={70} minSize={'40%'} mode="main">
                   <EuiFlexGroup direction="row" justifyContent="spaceAround">
                     <MaxWidthEuiFlexItem>
-                      <HeaderPage
-                        backOptions={{
-                          path: getRulesUrl(),
-                          text: i18n.BACK_TO_RULES,
-                          pageId: SecurityPageName.rules,
-                        }}
+                      <CustomHeaderPageMemo
+                        backOptions={backOptions}
                         isLoading={isLoading || loading}
                         title={i18n.PAGE_TITLE}
-                      >
-                        <EuiButton
-                          data-test-subj="preview-container"
-                          isSelected={isRulePreviewVisible}
-                          fill={isRulePreviewVisible}
-                          iconType="visBarVerticalStacked"
-                          onClick={() => {
-                            collapseFn.current?.();
-                            setIsRulePreviewVisible((isVisible) => !isVisible);
-                          }}
-                        >
-                          {i18n.RULE_PREVIEW_TITLE}
-                        </EuiButton>
-                      </HeaderPage>
+                        isRulePreviewVisible={isRulePreviewVisible}
+                        setIsRulePreviewVisible={setIsRulePreviewVisible}
+                        togglePanel={togglePanel}
+                      />
                       <MyEuiPanel zindex={4} hasBorder>
                         <EuiAccordion
                           initialIsOpen={true}
@@ -605,3 +604,35 @@ const CreateRulePageComponent: React.FC = () => {
 };
 
 export const CreateRulePage = React.memo(CreateRulePageComponent);
+
+const CustomHeaderPage: React.FC<
+  HeaderPageProps & {
+    togglePanel: EuiResizableContainerActions['togglePanel'] | undefined;
+    isRulePreviewVisible: boolean;
+    setIsRulePreviewVisible: (value: React.SetStateAction<boolean>) => void;
+  }
+> = ({
+  backOptions,
+  isLoading,
+  title,
+  togglePanel,
+  isRulePreviewVisible,
+  setIsRulePreviewVisible,
+}) => (
+  <HeaderPage backOptions={backOptions} isLoading={isLoading} title={title}>
+    <EuiButton
+      data-test-subj="preview-container"
+      isSelected={isRulePreviewVisible}
+      fill={isRulePreviewVisible}
+      iconType="visBarVerticalStacked"
+      onClick={() => {
+        togglePanel?.('preview', { direction: 'left' });
+        setIsRulePreviewVisible((isVisible) => !isVisible);
+      }}
+    >
+      {i18n.RULE_PREVIEW_TITLE}
+    </EuiButton>
+  </HeaderPage>
+);
+
+const CustomHeaderPageMemo = memo(CustomHeaderPage);
