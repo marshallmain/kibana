@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { useCallback } from 'react';
+import React, { memo, useCallback } from 'react';
 import { EuiFlexGroup, EuiFlexItem, EuiRange, EuiFormRow } from '@elastic/eui';
 import type { EuiRangeProps } from '@elastic/eui';
 
@@ -16,17 +16,45 @@ interface AnomalyThresholdSliderProps {
   field: FieldHook;
 }
 
+interface AnomalyThresholdSliderComponentProps {
+  threshold: number;
+  onThresholdChange: EuiRangeProps['onChange'];
+}
+
+const AnomalyThresholdSliderComponent: React.FC<AnomalyThresholdSliderComponentProps> = ({
+  threshold,
+  onThresholdChange,
+}) => (
+  <EuiFlexGroup>
+    <EuiFlexItem>
+      <EuiRange
+        value={threshold}
+        onChange={onThresholdChange}
+        fullWidth
+        showInput
+        showRange
+        showTicks
+        tickInterval={25}
+        min={0}
+        max={100}
+      />
+    </EuiFlexItem>
+  </EuiFlexGroup>
+);
+
+const AnomalyThresholdSliderMemo = memo(AnomalyThresholdSliderComponent);
+
 export const AnomalyThresholdSlider = ({
   describedByIds = [],
   field,
 }: AnomalyThresholdSliderProps) => {
-  const threshold = field.value as number;
+  const { value: threshold, setValue } = field;
   const onThresholdChange: EuiRangeProps['onChange'] = useCallback(
     (event) => {
       const thresholdValue = Number(event.currentTarget.value);
-      field.setValue(thresholdValue);
+      setValue(thresholdValue);
     },
-    [field]
+    [setValue]
   );
 
   return (
@@ -35,21 +63,10 @@ export const AnomalyThresholdSlider = ({
       data-test-subj="anomalyThresholdSlider"
       describedByIds={describedByIds}
     >
-      <EuiFlexGroup>
-        <EuiFlexItem>
-          <EuiRange
-            value={threshold}
-            onChange={onThresholdChange}
-            fullWidth
-            showInput
-            showRange
-            showTicks
-            tickInterval={25}
-            min={0}
-            max={100}
-          />
-        </EuiFlexItem>
-      </EuiFlexGroup>
+      <AnomalyThresholdSliderMemo
+        threshold={threshold as number}
+        onThresholdChange={onThresholdChange}
+      />
     </EuiFormRow>
   );
 };

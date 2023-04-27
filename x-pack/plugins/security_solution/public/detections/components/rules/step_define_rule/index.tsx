@@ -53,7 +53,7 @@ import type { QueryBarDefineRuleProps } from '../query_bar';
 import { QueryBarDefineRule } from '../query_bar';
 import { SelectRuleType } from '../select_rule_type';
 import { AnomalyThresholdSlider } from '../anomaly_threshold_slider';
-import { MlJobSelect } from '../ml_job_select';
+import { MlJobSelectWrapper } from '../ml_job_select';
 import { PickTimeline } from '../pick_timeline';
 import { StepContentWrapper } from '../step_content_wrapper';
 import { NextStep } from '../next_step';
@@ -122,6 +122,8 @@ export const MyLabelButton = styled(EuiButtonEmpty)`
 MyLabelButton.defaultProps = {
   flush: 'right',
 };
+
+const mlJobSelectDescribedByIds = ['detectionEngineStepDefineRulemachineLearningJobId'];
 
 const RuleTypeEuiFormRow = styled(EuiFormRow).attrs<{ $isVisible: boolean }>(({ $isVisible }) => ({
   style: {
@@ -966,9 +968,9 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
             <>
               <UseField
                 path="machineLearningJobId"
-                component={MlJobSelect}
+                component={MlJobSelectWrapper}
                 componentProps={{
-                  describedByIds: ['detectionEngineStepDefineRulemachineLearningJobId'],
+                  describedByIds: mlJobSelectDescribedByIds,
                 }}
               />
               <UseField

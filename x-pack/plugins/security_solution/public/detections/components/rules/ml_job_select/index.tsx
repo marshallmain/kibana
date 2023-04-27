@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import type { EuiComboBoxOptionOption } from '@elastic/eui';
 import {
   EuiButton,
@@ -62,9 +62,18 @@ const JobDisplay: React.FC<MlJobValue> = ({ description, name, id }) => (
   </JobDisplayContainer>
 );
 
-interface MlJobSelectProps {
+interface MlJobSelectWrapperProps {
   describedByIds: string[];
   field: FieldHook;
+}
+
+interface MlJobSelectComponentProps {
+  describedByIds: string[];
+  fieldValue: string[];
+  setFieldValue: (value: unknown) => void;
+  fieldLabel: string | undefined;
+  isChangingValue: FieldHook['isChangingValue'];
+  errors: FieldHook['errors'];
 }
 
 const renderJobOption = (option: MlJobOption) => (
@@ -77,9 +86,30 @@ const renderJobOption = (option: MlJobOption) => (
   />
 );
 
-export const MlJobSelect: React.FC<MlJobSelectProps> = ({ describedByIds = [], field }) => {
-  const jobIds = field.value as string[];
-  const { isInvalid, errorMessage } = getFieldValidityAndErrorMessage(field);
+export const MlJobSelectWrapper: React.FC<MlJobSelectWrapperProps> = ({
+  describedByIds = [],
+  field,
+}) => (
+  <MlJobSelect
+    describedByIds={describedByIds}
+    fieldValue={field.value as string[]}
+    setFieldValue={field.setValue}
+    fieldLabel={field.label}
+    isChangingValue={field.isChangingValue}
+    errors={field.errors}
+  />
+);
+
+export const MlJobSelectComponent: React.FC<MlJobSelectComponentProps> = ({
+  describedByIds = [],
+  fieldValue,
+  setFieldValue,
+  fieldLabel,
+  isChangingValue,
+  errors,
+}) => {
+  const jobIds = fieldValue;
+  const { isInvalid, errorMessage } = getFieldValidityAndErrorMessage({ isChangingValue, errors });
   const { loading, jobs } = useSecurityJobs();
   const { getUrlForApp, navigateToApp } = useKibana().services.application;
   const mlUrl = getUrlForApp('ml');
@@ -87,9 +117,9 @@ export const MlJobSelect: React.FC<MlJobSelectProps> = ({ describedByIds = [], f
     (selectedJobOptions: MlJobOption[]): void => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const selectedJobIds = selectedJobOptions.map((option) => option.value!.id);
-      field.setValue(selectedJobIds);
+      setFieldValue(selectedJobIds);
     },
-    [field]
+    [setFieldValue]
   );
 
   const jobOptions = jobs.map((job) => ({
@@ -122,7 +152,7 @@ export const MlJobSelect: React.FC<MlJobSelectProps> = ({ describedByIds = [], f
     <MlJobSelectEuiFlexGroup justifyContent="flexStart">
       <EuiFlexItem grow={false}>
         <EuiFormRow
-          label={field.label}
+          label={fieldLabel}
           helpText={<HelpText href={mlUrl} notRunningJobIds={notRunningJobIds} />}
           isInvalid={isInvalid}
           error={errorMessage}
@@ -156,3 +186,5 @@ export const MlJobSelect: React.FC<MlJobSelectProps> = ({ describedByIds = [], f
     </MlJobSelectEuiFlexGroup>
   );
 };
+
+const MlJobSelect = memo(MlJobSelectComponent);
