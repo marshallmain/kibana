@@ -15,7 +15,7 @@ import {
   transparentize,
 } from '@elastic/eui';
 import { isEmpty } from 'lodash/fp';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, memo } from 'react';
 import styled from 'styled-components';
 
 import type { FieldHook } from '../../../../shared_imports';
@@ -23,8 +23,24 @@ import { getFieldValidityAndErrorMessage } from '../../../../shared_imports';
 
 import * as I18n from './translations';
 
-interface ScheduleItemProps {
+interface ScheduleItemWrapperProps {
   field: FieldHook<string>;
+  dataTestSubj: string;
+  idAria: string;
+  isDisabled: boolean;
+  minimumValue?: number;
+  timeTypes?: string[];
+  fullWidth?: boolean;
+}
+
+interface ScheduleItemProps {
+  fieldValue: FieldHook<string>['value'];
+  setFieldValue: FieldHook<string>['setValue'];
+  fieldLabel: FieldHook<string>['label'];
+  fieldLabelAppend: FieldHook<string>['labelAppend'];
+  fieldHelpText: FieldHook<string>['helpText'];
+  isChangingValue: FieldHook<string>['isChangingValue'];
+  errors: FieldHook<string>['errors'];
   dataTestSubj: string;
   idAria: string;
   isDisabled: boolean;
@@ -92,9 +108,41 @@ const getNumberFromUserInput = (input: string, minimumValue = 0): number => {
   }
 };
 
-export const ScheduleItem = ({
+export const ScheduleItemWrapper: React.FC<ScheduleItemWrapperProps> = ({
   dataTestSubj,
   field,
+  idAria,
+  isDisabled,
+  minimumValue = 0,
+  timeTypes = ['s', 'm', 'h'],
+  fullWidth = false,
+}) => (
+  <ScheduleItem
+    fieldValue={field.value}
+    setFieldValue={field.setValue}
+    fieldLabel={field.label}
+    fieldLabelAppend={field.labelAppend}
+    fieldHelpText={field.helpText}
+    isChangingValue={field.isChangingValue}
+    errors={field.errors}
+    dataTestSubj={dataTestSubj}
+    idAria={idAria}
+    isDisabled={isDisabled}
+    minimumValue={minimumValue}
+    timeTypes={timeTypes}
+    fullWidth={fullWidth}
+  />
+);
+
+const ScheduleItemComponent = ({
+  fieldValue,
+  setFieldValue,
+  fieldLabel,
+  fieldLabelAppend,
+  fieldHelpText,
+  isChangingValue,
+  errors,
+  dataTestSubj,
   idAria,
   isDisabled,
   minimumValue = 0,
@@ -103,30 +151,29 @@ export const ScheduleItem = ({
 }: ScheduleItemProps) => {
   const [timeType, setTimeType] = useState(timeTypes[0]);
   const [timeVal, setTimeVal] = useState<number>(0);
-  const { isInvalid, errorMessage } = getFieldValidityAndErrorMessage(field);
-  const { value, setValue } = field;
+  const { isInvalid, errorMessage } = getFieldValidityAndErrorMessage({ isChangingValue, errors });
 
   const onChangeTimeType = useCallback(
     (e) => {
       setTimeType(e.target.value);
-      setValue(`${timeVal}${e.target.value}`);
+      setFieldValue(`${timeVal}${e.target.value}`);
     },
-    [setValue, timeVal]
+    [setFieldValue, timeVal]
   );
 
   const onChangeTimeVal = useCallback(
     (e) => {
       const sanitizedValue = getNumberFromUserInput(e.target.value, minimumValue);
       setTimeVal(sanitizedValue);
-      setValue(`${sanitizedValue}${timeType}`);
+      setFieldValue(`${sanitizedValue}${timeType}`);
     },
-    [minimumValue, setValue, timeType]
+    [minimumValue, setFieldValue, timeType]
   );
 
   useEffect(() => {
-    if (value !== `${timeVal}${timeType}`) {
-      const filterTimeVal = value.match(/\d+/g);
-      const filterTimeType = value.match(/[a-zA-Z]+/g);
+    if (fieldValue !== `${timeVal}${timeType}`) {
+      const filterTimeVal = fieldValue.match(/\d+/g);
+      const filterTimeType = fieldValue.match(/[a-zA-Z]+/g);
       if (
         !isEmpty(filterTimeVal) &&
         filterTimeVal != null &&
@@ -144,7 +191,7 @@ export const ScheduleItem = ({
         setTimeType(filterTimeType[0]);
       }
     }
-  }, [timeType, timeTypes, timeVal, value]);
+  }, [timeType, timeTypes, timeVal, fieldValue]);
 
   // EUI missing some props
   const rest = { disabled: isDisabled };
@@ -152,20 +199,20 @@ export const ScheduleItem = ({
     () => (
       <EuiFlexGroup gutterSize="s" justifyContent="flexStart" alignItems="center">
         <EuiFlexItem grow={false} component="span">
-          {field.label}
+          {fieldLabel}
         </EuiFlexItem>
         <StyledLabelAppend grow={false} component="span">
-          {field.labelAppend}
+          {fieldLabelAppend}
         </StyledLabelAppend>
       </EuiFlexGroup>
     ),
-    [field.label, field.labelAppend]
+    [fieldLabel, fieldLabelAppend]
   );
 
   return (
     <StyledEuiFormRow
       label={label}
-      helpText={field.helpText}
+      helpText={fieldHelpText}
       error={errorMessage}
       isInvalid={isInvalid}
       fullWidth={fullWidth}
@@ -197,3 +244,5 @@ export const ScheduleItem = ({
     </StyledEuiFormRow>
   );
 };
+
+export const ScheduleItem = memo(ScheduleItemComponent);

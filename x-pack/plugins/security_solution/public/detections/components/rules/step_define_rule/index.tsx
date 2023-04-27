@@ -83,7 +83,7 @@ import { ThreatMatchInputWrapper } from '../threatmatch_input';
 import type { BrowserField } from '../../../../common/containers/source';
 import { useFetchIndex } from '../../../../common/containers/source';
 import { NewTermsFields } from '../new_terms_fields';
-import { ScheduleItem } from '../schedule_item_form';
+import { ScheduleItemWrapper } from '../schedule_item_form';
 import { DocLink } from '../../../../common/components/links_to_docs/doc_link';
 import { defaultCustomQuery } from '../../../pages/detection_engine/rules/utils';
 import { getIsRulePreviewDisabled } from '../rule_preview/helpers';
@@ -124,6 +124,12 @@ MyLabelButton.defaultProps = {
 };
 
 const mlJobSelectDescribedByIds = ['detectionEngineStepDefineRulemachineLearningJobId'];
+
+const historyWindowSizeComponentProps = {
+  idAria: 'detectionEngineStepDefineRuleHistoryWindowSize',
+  dataTestSubj: 'detectionEngineStepDefineRuleHistoryWindowSize',
+  timeTypes: ['m', 'h', 'd'],
+};
 
 const RuleTypeEuiFormRow = styled(EuiFormRow).attrs<{ $isVisible: boolean }>(({ $isVisible }) => ({
   style: {
@@ -1021,12 +1027,8 @@ const StepDefineRuleComponent: FC<StepDefineRuleProps> = ({
               />
               <UseField
                 path="historyWindowSize"
-                component={ScheduleItem}
-                componentProps={{
-                  idAria: 'detectionEngineStepDefineRuleHistoryWindowSize',
-                  dataTestSubj: 'detectionEngineStepDefineRuleHistoryWindowSize',
-                  timeTypes: ['m', 'h', 'd'],
-                }}
+                component={ScheduleItemWrapper}
+                componentProps={historyWindowSizeComponentProps}
               />
             </>
           </RuleTypeEuiFormRow>
