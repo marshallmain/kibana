@@ -231,14 +231,6 @@ const CreateRulePageComponent: React.FC = () => {
     fetchDV();
   }, [dataViews]);
 
-  const handleAccordionToggle = useCallback(
-    (step: RuleStep, isOpen: boolean) =>
-      setOpenSteps((_openSteps) => ({
-        ..._openSteps,
-        [step]: isOpen,
-      })),
-    []
-  );
   const goToStep = useCallback(
     (step: RuleStep) => {
       if (ruleStepsOrder.indexOf(step) > ruleStepsOrder.indexOf(activeStep) && !openSteps[step]) {
@@ -377,6 +369,171 @@ const CreateRulePageComponent: React.FC = () => {
     [rulesUrl]
   );
 
+  const submitDefineStep = useCallback(() => submitStep(RuleStep.defineRule), [submitStep]);
+  const toggleDefineStep = useCallback(
+    (isOpen: boolean) =>
+      setOpenSteps((_openSteps) => ({
+        ..._openSteps,
+        [RuleStep.defineRule]: isOpen,
+      })),
+    [setOpenSteps]
+  );
+  const toggleAboutStep = useCallback(
+    (isOpen: boolean) =>
+      setOpenSteps((_openSteps) => ({
+        ..._openSteps,
+        [RuleStep.aboutRule]: isOpen,
+      })),
+    [setOpenSteps]
+  );
+  const toggleScheduleStep = useCallback(
+    (isOpen: boolean) =>
+      setOpenSteps((_openSteps) => ({
+        ..._openSteps,
+        [RuleStep.scheduleRule]: isOpen,
+      })),
+    [setOpenSteps]
+  );
+  const toggleActionsStep = useCallback(
+    (isOpen: boolean) =>
+      setOpenSteps((_openSteps) => ({
+        ..._openSteps,
+        [RuleStep.ruleActions]: isOpen,
+      })),
+    [setOpenSteps]
+  );
+
+  const memoStepDefineRule = useMemo(
+    () => (
+      <>
+        <EuiHorizontalRule margin="m" />
+        <StepDefineRule
+          addPadding={true}
+          defaultValues={defineRuleData}
+          isReadOnlyView={activeStep !== RuleStep.defineRule}
+          isLoading={isLoading || loading}
+          setForm={setFormHook}
+          onSubmit={submitDefineStep}
+          kibanaDataViews={dataViewOptions}
+          descriptionColumns="singleSplit"
+          // We need a key to make this component remount when edit/view mode is toggled
+          // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
+          key={isShouldRerenderStep(RuleStep.defineRule, activeStep)}
+          indicesConfig={indicesConfig}
+          threatIndicesConfig={threatIndicesConfig}
+          onRuleDataChange={updateCurrentDataState}
+          onPreviewDisabledStateChange={setIsPreviewDisabled}
+        />
+      </>
+    ),
+    [
+      activeStep,
+      dataViewOptions,
+      defineRuleData,
+      indicesConfig,
+      isLoading,
+      loading,
+      setFormHook,
+      submitDefineStep,
+      threatIndicesConfig,
+      updateCurrentDataState,
+    ]
+  );
+
+  const memoStepAboutRule = useMemo(
+    () => (
+      <>
+        <EuiHorizontalRule margin="m" />
+        <StepAboutRule
+          addPadding={true}
+          defaultValues={aboutRuleData}
+          defineRuleData={defineRuleData}
+          descriptionColumns="singleSplit"
+          isReadOnlyView={activeStep !== RuleStep.aboutRule}
+          isLoading={isLoading || loading}
+          setForm={setFormHook}
+          onSubmit={() => submitStep(RuleStep.aboutRule)}
+          // We need a key to make this component remount when edit/view mode is toggled
+          // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
+          key={isShouldRerenderStep(RuleStep.aboutRule, activeStep)}
+          onRuleDataChange={updateCurrentDataState}
+        />
+      </>
+    ),
+    [
+      aboutRuleData,
+      activeStep,
+      defineRuleData,
+      isLoading,
+      loading,
+      setFormHook,
+      submitStep,
+      updateCurrentDataState,
+    ]
+  );
+
+  const memoStepScheduleRule = useMemo(
+    () => (
+      <>
+        <EuiHorizontalRule margin="m" />
+        <StepScheduleRule
+          addPadding={true}
+          defaultValues={scheduleRuleData}
+          descriptionColumns="singleSplit"
+          isReadOnlyView={activeStep !== RuleStep.scheduleRule}
+          isLoading={isLoading || loading}
+          setForm={setFormHook}
+          onSubmit={() => submitStep(RuleStep.scheduleRule)}
+          // We need a key to make this component remount when edit/view mode is toggled
+          // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
+          key={isShouldRerenderStep(RuleStep.scheduleRule, activeStep)}
+          onRuleDataChange={updateCurrentDataState}
+        />
+      </>
+    ),
+    [
+      activeStep,
+      isLoading,
+      loading,
+      scheduleRuleData,
+      setFormHook,
+      submitStep,
+      updateCurrentDataState,
+    ]
+  );
+
+  const memoStepRuleActions = useMemo(
+    () => (
+      <>
+        <EuiHorizontalRule margin="m" />
+        <StepRuleActions
+          addPadding={true}
+          defaultValues={stepsData.current[RuleStep.ruleActions].data}
+          isReadOnlyView={activeStep !== RuleStep.ruleActions}
+          isLoading={isLoading || loading || isStartingJobs}
+          setForm={setFormHook}
+          onSubmit={() => submitStep(RuleStep.ruleActions)}
+          actionMessageParams={actionMessageParams}
+          summaryActionMessageParams={actionMessageParams}
+          // We need a key to make this component remount when edit/view mode is toggled
+          // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
+          key={isShouldRerenderStep(RuleStep.ruleActions, activeStep)}
+          ruleType={ruleType}
+        />
+      </>
+    ),
+    [
+      actionMessageParams,
+      activeStep,
+      isLoading,
+      isStartingJobs,
+      loading,
+      ruleType,
+      setFormHook,
+      submitStep,
+    ]
+  );
+
   if (
     redirectToDetections(
       isSignalIndexExists,
@@ -418,13 +575,13 @@ const CreateRulePageComponent: React.FC = () => {
                         togglePanel={togglePanel}
                       />
                       <MyEuiPanel zindex={4} hasBorder>
-                        <EuiAccordion
+                        <MemoEuiAccordion
                           initialIsOpen={true}
                           id={RuleStep.defineRule}
                           buttonContent={defineRuleButton}
                           paddingSize="xs"
                           ref={defineRuleRef}
-                          onToggle={handleAccordionToggle.bind(null, RuleStep.defineRule)}
+                          onToggle={toggleDefineStep}
                           extraAction={
                             stepsData.current[RuleStep.defineRule].isValid && (
                               <EuiButtonEmpty
@@ -438,35 +595,18 @@ const CreateRulePageComponent: React.FC = () => {
                             )
                           }
                         >
-                          <EuiHorizontalRule margin="m" />
-                          <StepDefineRule
-                            addPadding={true}
-                            defaultValues={defineRuleData}
-                            isReadOnlyView={activeStep !== RuleStep.defineRule}
-                            isLoading={isLoading || loading}
-                            setForm={setFormHook}
-                            onSubmit={() => submitStep(RuleStep.defineRule)}
-                            kibanaDataViews={dataViewOptions}
-                            descriptionColumns="singleSplit"
-                            // We need a key to make this component remount when edit/view mode is toggled
-                            // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
-                            key={isShouldRerenderStep(RuleStep.defineRule, activeStep)}
-                            indicesConfig={indicesConfig}
-                            threatIndicesConfig={threatIndicesConfig}
-                            onRuleDataChange={updateCurrentDataState}
-                            onPreviewDisabledStateChange={setIsPreviewDisabled}
-                          />
-                        </EuiAccordion>
+                          {memoStepDefineRule}
+                        </MemoEuiAccordion>
                       </MyEuiPanel>
                       <EuiSpacer size="l" />
                       <MyEuiPanel hasBorder zindex={3}>
-                        <EuiAccordion
+                        <MemoEuiAccordion
                           initialIsOpen={false}
                           id={RuleStep.aboutRule}
                           buttonContent={aboutRuleButton}
                           paddingSize="xs"
                           ref={aboutRuleRef}
-                          onToggle={handleAccordionToggle.bind(null, RuleStep.aboutRule)}
+                          onToggle={toggleAboutStep}
                           extraAction={
                             stepsData.current[RuleStep.aboutRule].isValid && (
                               <EuiButtonEmpty
@@ -480,32 +620,18 @@ const CreateRulePageComponent: React.FC = () => {
                             )
                           }
                         >
-                          <EuiHorizontalRule margin="m" />
-                          <StepAboutRule
-                            addPadding={true}
-                            defaultValues={aboutRuleData}
-                            defineRuleData={defineRuleData}
-                            descriptionColumns="singleSplit"
-                            isReadOnlyView={activeStep !== RuleStep.aboutRule}
-                            isLoading={isLoading || loading}
-                            setForm={setFormHook}
-                            onSubmit={() => submitStep(RuleStep.aboutRule)}
-                            // We need a key to make this component remount when edit/view mode is toggled
-                            // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
-                            key={isShouldRerenderStep(RuleStep.aboutRule, activeStep)}
-                            onRuleDataChange={updateCurrentDataState}
-                          />
-                        </EuiAccordion>
+                          {memoStepAboutRule}
+                        </MemoEuiAccordion>
                       </MyEuiPanel>
                       <EuiSpacer size="l" />
                       <MyEuiPanel hasBorder zindex={2}>
-                        <EuiAccordion
+                        <MemoEuiAccordion
                           initialIsOpen={false}
                           id={RuleStep.scheduleRule}
                           buttonContent={scheduleRuleButton}
                           paddingSize="xs"
                           ref={scheduleRuleRef}
-                          onToggle={handleAccordionToggle.bind(null, RuleStep.scheduleRule)}
+                          onToggle={toggleScheduleStep}
                           extraAction={
                             stepsData.current[RuleStep.scheduleRule].isValid && (
                               <EuiButtonEmpty
@@ -518,31 +644,18 @@ const CreateRulePageComponent: React.FC = () => {
                             )
                           }
                         >
-                          <EuiHorizontalRule margin="m" />
-                          <StepScheduleRule
-                            addPadding={true}
-                            defaultValues={scheduleRuleData}
-                            descriptionColumns="singleSplit"
-                            isReadOnlyView={activeStep !== RuleStep.scheduleRule}
-                            isLoading={isLoading || loading}
-                            setForm={setFormHook}
-                            onSubmit={() => submitStep(RuleStep.scheduleRule)}
-                            // We need a key to make this component remount when edit/view mode is toggled
-                            // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
-                            key={isShouldRerenderStep(RuleStep.scheduleRule, activeStep)}
-                            onRuleDataChange={updateCurrentDataState}
-                          />
-                        </EuiAccordion>
+                          {memoStepScheduleRule}
+                        </MemoEuiAccordion>
                       </MyEuiPanel>
                       <EuiSpacer size="l" />
                       <MyEuiPanel hasBorder zindex={1}>
-                        <EuiAccordion
+                        <MemoEuiAccordion
                           initialIsOpen={false}
                           id={RuleStep.ruleActions}
                           buttonContent={ruleActionsButton}
                           paddingSize="xs"
                           ref={ruleActionsRef}
-                          onToggle={handleAccordionToggle.bind(null, RuleStep.ruleActions)}
+                          onToggle={toggleActionsStep}
                           extraAction={
                             stepsData.current[RuleStep.ruleActions].isValid && (
                               <EuiButtonEmpty
@@ -555,22 +668,8 @@ const CreateRulePageComponent: React.FC = () => {
                             )
                           }
                         >
-                          <EuiHorizontalRule margin="m" />
-                          <StepRuleActions
-                            addPadding={true}
-                            defaultValues={stepsData.current[RuleStep.ruleActions].data}
-                            isReadOnlyView={activeStep !== RuleStep.ruleActions}
-                            isLoading={isLoading || loading || isStartingJobs}
-                            setForm={setFormHook}
-                            onSubmit={() => submitStep(RuleStep.ruleActions)}
-                            actionMessageParams={actionMessageParams}
-                            summaryActionMessageParams={actionMessageParams}
-                            // We need a key to make this component remount when edit/view mode is toggled
-                            // https://github.com/elastic/kibana/pull/132834#discussion_r881705566
-                            key={isShouldRerenderStep(RuleStep.ruleActions, activeStep)}
-                            ruleType={ruleType}
-                          />
-                        </EuiAccordion>
+                          {memoStepRuleActions}
+                        </MemoEuiAccordion>
                       </MyEuiPanel>
                     </MaxWidthEuiFlexItem>
                   </EuiFlexGroup>
@@ -636,3 +735,4 @@ const CustomHeaderPage: React.FC<
 );
 
 const CustomHeaderPageMemo = memo(CustomHeaderPage);
+const MemoEuiAccordion = memo(EuiAccordion);
