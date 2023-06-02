@@ -7,12 +7,12 @@
 
 import moment from 'moment';
 import {
-  GetRuleExecutionResultsRequestParams,
-  GetRuleExecutionResultsRequestQuery,
-  GetRuleExecutionResultsRequestBody,
-} from '../../../../../common/generated_schema/get_rule_execution_results/get_rule_execution_results_request_schema.gen';
+  FindRulesRequestParams,
+  FindRulesRequestQuery,
+  FindRulesRequestBody,
+} from '../../../../../common/generated_schema/find_rules/find_rules_request_schema.gen';
 import type { SecuritySolutionPluginRouter } from '../../../../types';
-import { getRuleExecutionResultsImplementation } from './get_rule_execution_results_implementation';
+import { findRulesImplementation } from './find_rules_implementation';
 import { buildRouteValidationWithZod } from '../../../../utils/build_validation/route_validation';
 
 /*
@@ -21,16 +21,17 @@ import { buildRouteValidationWithZod } from '../../../../utils/build_validation/
  */
 
 /**
- * Returns execution results of a given rule (aggregated by execution UUID) from Event Log.
+ * Retrieves a paginated subset of detection rules. By default, the first page is returned with 20 results per page.
+ * tags: Rules API
  */
-export const getRuleExecutionResultsRoute = (router: SecuritySolutionPluginRouter) => {
+export const findRulesRoute = (router: SecuritySolutionPluginRouter) => {
   router.get(
     {
-      path: '/internal/detection_engine/rules/{ruleId}/execution/results',
+      path: '/api/detection_engine/rules/_find',
       validate: {
-        params: buildRouteValidationWithZod(GetRuleExecutionResultsRequestParams),
-        query: buildRouteValidationWithZod(GetRuleExecutionResultsRequestQuery),
-        body: buildRouteValidationWithZod(GetRuleExecutionResultsRequestBody),
+        params: buildRouteValidationWithZod(FindRulesRequestParams),
+        query: buildRouteValidationWithZod(FindRulesRequestQuery),
+        body: buildRouteValidationWithZod(FindRulesRequestBody),
       },
       options: {
         tags: ['access:securitySolution'],
@@ -44,7 +45,7 @@ export const getRuleExecutionResultsRoute = (router: SecuritySolutionPluginRoute
       },
     },
     async (context, request, response) => {
-      return getRuleExecutionResultsImplementation(context, request, response);
+      return findRulesImplementation(context, request, response);
     }
   );
 };

@@ -5,12 +5,9 @@
  * 2.0.
  */
 
-import { transformError } from '@kbn/securitysolution-es-utils';
 import moment from 'moment';
-import type { {{operationId}}Response } from '../../../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_response_schema.gen';
 import {  {{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody } from '../../../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_request_schema.gen';
 import type { SecuritySolutionPluginRouter } from '../../../../types';
-import { buildSiemResponse } from '../../routes/utils';
 import { {{camelCase operationId}}Implementation } from './{{snakeCase operationId}}_implementation';
 import { buildRouteValidationWithZod } from '../../../../utils/build_validation/route_validation';
 
@@ -48,18 +45,7 @@ export const {{camelCase operationId}}Route = (router: SecuritySolutionPluginRou
       },
     },
     async (context, request, response) => {
-      try {
-        const body: {{operationId}}Response  = await {{camelCase operationId}}Implementation(context, request, response);
-
-        return response.ok({ body });
-      } catch (err) {
-        const siemResponse = buildSiemResponse(response);
-        const error = transformError(err);
-        return siemResponse.error({
-          body: error.message,
-          statusCode: error.statusCode,
-        });
-      }
+      return {{camelCase operationId}}Implementation(context, request, response);
     }
   );
 };

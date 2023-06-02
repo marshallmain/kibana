@@ -6,6 +6,7 @@
  */
 
 import type { KibanaRequest, KibanaResponseFactory } from '@kbn/core/server';
+import type { IKibanaResponse } from '@kbn/core-http-server';
 import type { SecuritySolutionRequestHandlerContext } from '../../../../types';
 import type { {{operationId}}Response } from '../../../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_response_schema.gen';
 import type { {{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody } from '../../../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_request_schema.gen';
@@ -14,6 +15,6 @@ export const {{camelCase operationId}}Implementation = async (
   context: SecuritySolutionRequestHandlerContext,
   request: KibanaRequest<{{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody, '{{method}}'>,
   response: KibanaResponseFactory,
-): Promise<{{operationId}}Response> => {
+): Promise<IKibanaResponse<{{operationId}}Response>>  => {
   throw new Error('Not implemented');
 };

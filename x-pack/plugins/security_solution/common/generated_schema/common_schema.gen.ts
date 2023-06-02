@@ -19,6 +19,24 @@ export const CsvToArray = (value: unknown) => {
   return value;
 };
 
+export const FindRulesSortField = z.enum([
+  'created_at',
+  'createdAt',
+  'enabled',
+  'execution_summary.last_execution.date',
+  'execution_summary.last_execution.metrics.execution_gap_duration_s',
+  'execution_summary.last_execution.metrics.total_indexing_duration_ms',
+  'execution_summary.last_execution.metrics.total_search_duration_ms',
+  'execution_summary.last_execution.status',
+  'name',
+  'risk_score',
+  'riskScore',
+  'severity',
+  'updated_at',
+  'updatedAt',
+]);
+export type FindRulesSortField = z.infer<typeof FindRulesSortField>;
+
 export const SortOrder = z.enum(['asc', 'desc']);
 export type SortOrder = z.infer<typeof SortOrder>;
 
@@ -67,31 +85,48 @@ export const RuleExecutionResult = z.object({
 });
 export type RuleExecutionResult = z.infer<typeof RuleExecutionResult>;
 
-export const Actions = z.object({
+export const Action = z.object({
   /**
    * The action type used for sending notifications.
    */
-  action_type_id: z.string().optional(),
+  action_type_id: z.string(),
   /**
    * Optionally groups actions by use cases. Use `default` for alert notifications.
    */
-  group: z.string().optional(),
+  group: z.string(),
   /**
    * The connector ID.
    */
-  id: z.string().optional(),
+  id: z.string(),
   /**
    * Object containing the allowed connector fields, which varies according to the connector type.
    */
-  params: z.object({}).optional(),
+  params: z.object({}),
+  uuid: z.string().optional(),
+  /**
+   * TODO implement the schema type
+   */
+  alerts_filter: z.object({}).optional(),
+  /**
+   * TODO implement the schema type
+   */
+  frequency: z.object({}).optional(),
 });
-export type Actions = z.infer<typeof Actions>;
+export type Action = z.infer<typeof Action>;
+
+export const AlertSuppression = z.object({
+  group_by: z.array(z.string()).min(1).max(3),
+  duration: z
+    .object({
+      value: z.number().min(1).optional(),
+      unit: z.enum(['s', 'm', 'h']).optional(),
+    })
+    .optional(),
+  missing_fields_strategy: z.enum(['doNotSuppress', 'suppress']).optional(),
+});
+export type AlertSuppression = z.infer<typeof AlertSuppression>;
 
 export const BaseRule = z.object({
-  /**
-   * Rule ID
-   */
-  id: z.string(),
   /**
    * Rule name
    */
@@ -99,7 +134,23 @@ export const BaseRule = z.object({
   /**
    * Rule description
    */
-  description: z.string().optional(),
+  description: z.string(),
+  /**
+   * Risk score (0 to 100)
+   */
+  risk_score: z.number().min(0).max(100),
+  /**
+   * Severity of the rule
+   */
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  /**
+   * Sets the source field for the alert's signal.rule.name value
+   */
+  rule_name_override: z.string().optional(),
+  /**
+   * Sets the time field used to query indices (optional)
+   */
+  timestamp_override: z.string().optional(),
   /**
    * Timeline template ID
    */
@@ -108,29 +159,132 @@ export const BaseRule = z.object({
    * Timeline template title
    */
   timeline_title: z.string().optional(),
-  actions: z
+  outcome: z.enum(['exactMatch', 'aliasMatch', 'conflict']).optional(),
+  /**
+   * TODO
+   */
+  alias_target_id: z.string().optional(),
+  /**
+   * TODO
+   */
+  alias_purpose: z.enum(['savedObjectConversion', 'savedObjectImport']).optional(),
+  /**
+   * The rule’s license.
+   */
+  license: z.string().optional(),
+  /**
+   * Notes to help investigate alerts produced by the rule.
+   */
+  note: z.string().optional(),
+  /**
+   * Determines if the rule acts as a building block. By default, building-block alerts are not displayed in the UI. These rules are used as a foundation for other rules that do generate alerts. Its value must be default.
+   */
+  building_block_type: z.string().optional(),
+  /**
+   * (deprecated) Has no effect.
+   */
+  output_index: z.string().optional(),
+  /**
+   * Has no effect.
+   */
+  namespace: z.string().optional(),
+  /**
+   * Stores rule metadata.
+   */
+  meta: z.object({}).optional(),
+  /**
+   * Defines the interval on which a rule's actions are executed.
+   */
+  throttle: z.string().optional(),
+  /**
+   * The rule’s version number. Defaults to 1.
+   */
+  version: z.number().min(1).optional().default(1),
+  /**
+   * String array containing words and phrases to help categorize, filter, and search rules. Defaults to an empty array.
+   */
+  tags: z.array(z.string()).optional().default([]),
+  /**
+   * Determines whether the rule is enabled. Defaults to true.
+   */
+  enabled: z.boolean().optional().default(true),
+  /**
+   * Overrides generated alerts' risk_score with a value from the source event
+   */
+  risk_score_mapping: z
+    .array(
+      z.object({
+        field: z.string(),
+        operator: z.enum(['equals']),
+        value: z.string(),
+        risk_score: z.number().min(0).max(100).optional(),
+      })
+    )
+    .optional()
+    .default([]),
+  /**
+   * Overrides generated alerts' severity with values from the source event
+   */
+  severity_mapping: z
+    .array(
+      z.object({
+        field: z.string(),
+        operator: z.enum(['equals']),
+        severity: z.enum(['low', 'medium', 'high', 'critical']),
+        value: z.string(),
+      })
+    )
+    .optional()
+    .default([]),
+  /**
+   * Frequency of rule execution, using a date math range. For example, "1h" means the rule runs every hour. Defaults to 5m (5 minutes).
+   */
+  interval: z.string().optional().default('5m'),
+  /**
+   * Time from which data is analyzed each time the rule executes, using a date math range. For example, now-4200s means the rule analyzes data from 70 minutes before its start time. Defaults to now-6m (analyzes data from 6 minutes before the start time).
+   */
+  from: z.string().optional().default('now-6m'),
+  /**
+   * TODO
+   */
+  to: z.string().optional().default('now'),
+  actions: z.array(Action).optional().default([]),
+  exceptions_list: z
     .array(
       z.object({
         /**
-         * The action type used for sending notifications
+         * ID of the exception container
          */
-        action_type_id: z.string().optional(),
+        id: z.string().min(1),
         /**
-         * Optionally groups actions by use cases
+         * List ID of the exception container
          */
-        group: z.string().optional(),
+        list_id: z.string().min(1),
         /**
-         * The connector ID
+         * The exception type
          */
-        id: z.string().optional(),
+        type: z.enum([
+          'detection',
+          'rule_default',
+          'endpoint',
+          'endpoint_trusted_apps',
+          'endpoint_events',
+          'endpoint_host_isolation_exceptions',
+          'endpoint_blocklists',
+        ]),
         /**
-         * Object containing the allowed connector fields
+         * Determines the exceptions validity in rule's Kibana space
          */
-        params: z.object({}).optional(),
+        namespace_type: z.enum(['agnostic', 'single']),
       })
     )
-    .optional(),
-  threats: z
+    .optional()
+    .default([]),
+  author: z.array(z.string()).optional().default([]),
+  false_positives: z.array(z.string()).optional().default([]),
+  references: z.array(z.string()).optional().default([]),
+  max_signals: z.number().min(1).optional().default(100),
+  threat: z
     .array(
       z.object({
         /**
@@ -154,28 +308,6 @@ export const BaseRule = z.object({
       })
     )
     .optional(),
-  exceptions_list: z
-    .array(
-      z.object({
-        /**
-         * ID of the exception container
-         */
-        id: z.string().optional(),
-        /**
-         * List ID of the exception container
-         */
-        list_id: z.string().optional(),
-        /**
-         * Determines the exceptions validity in rule's Kibana space
-         */
-        namespace_type: z.string().optional(),
-        /**
-         * The exception type
-         */
-        type: z.string().optional(),
-      })
-    )
-    .optional(),
   /**
    * Determines the query language (optional)
    */
@@ -185,62 +317,9 @@ export const BaseRule = z.object({
    */
   filters: z.array(z.object({})).optional(),
   /**
-   * Risk score (0 to 100)
-   */
-  risk_score: z.number().min(0).max(100).optional(),
-  /**
-   * Severity of the rule
-   */
-  severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  /**
    * Indices on which the rule functions (optional)
    */
   index: z.array(z.string()).optional(),
-  /**
-   * Overrides generated alerts' risk_score with a value from the source event
-   */
-  risk_score_mapping: z
-    .array(
-      z.object({
-        field: z.string().optional(),
-        operator: z.string().optional(),
-        value: z.string().optional(),
-      })
-    )
-    .optional(),
-  /**
-   * Sets the source field for the alert's signal.rule.name value
-   */
-  rule_name_override: z.string().optional(),
-  /**
-   * Overrides generated alerts' severity with values from the source event
-   */
-  severity_mapping: z
-    .array(
-      z.object({
-        field: z.string().optional(),
-        operator: z.string().optional(),
-        severity: z.string().optional(),
-        value: z.string().optional(),
-      })
-    )
-    .optional(),
-  /**
-   * Sets the time field used to query indices (optional)
-   */
-  timestamp_override: z.string().optional(),
-  /**
-   * Contains the event classification (optional, only for EQL rules)
-   */
-  event_category_field: z.string().optional(),
-  /**
-   * Sets a secondary field for sorting events (optional, only for EQL rules)
-   */
-  tiebreaker_field: z.string().optional(),
-  /**
-   * Contains the event timestamp used for sorting a sequence of events (optional, only for EQL rules)
-   */
-  timestamp_field: z.string().optional(),
 });
 export type BaseRule = z.infer<typeof BaseRule>;
 
@@ -250,10 +329,23 @@ export const QueryRule = BaseRule.and(
      * Rule type
      */
     type: z.enum(['query']),
+    index: z.array(z.string()).optional(),
+    data_view_id: z.string().optional(),
+    filters: z.array(z.object({})).optional(),
+    saved_id: z.string().optional(),
+    /**
+     * TODO
+     */
+    response_actions: z.array(z.object({})).optional(),
+    alert_suppression: AlertSuppression.optional(),
     /**
      * Query to execute
      */
-    query: z.string(),
+    query: z.string().optional().default(''),
+    /**
+     * Query language to use.
+     */
+    language: z.enum(['kuery', 'lucene']).optional().default('kuery'),
   })
 );
 export type QueryRule = z.infer<typeof QueryRule>;
@@ -264,10 +356,23 @@ export const SavedQueryRule = BaseRule.and(
      * Rule type
      */
     type: z.enum(['saved_query']),
-    /**
-     * Saved query ID
-     */
+    index: z.array(z.string()).optional(),
+    data_view_id: z.string().optional(),
+    filters: z.array(z.object({})).optional(),
     saved_id: z.string(),
+    /**
+     * TODO
+     */
+    response_actions: z.array(z.object({})).optional(),
+    alert_suppression: AlertSuppression.optional(),
+    /**
+     * Query to execute
+     */
+    query: z.string().optional().default(''),
+    /**
+     * Query language to use.
+     */
+    language: z.enum(['kuery', 'lucene']).optional().default('kuery'),
   })
 );
 export type SavedQueryRule = z.infer<typeof SavedQueryRule>;
@@ -278,16 +383,33 @@ export const ThresholdRule = BaseRule.and(
      * Rule type
      */
     type: z.enum(['threshold']),
+    query: z.string(),
     threshold: z.object({
       /**
        * Field to aggregate on
        */
-      field: z.string().optional(),
+      field: z.union([z.string(), z.array(z.string())]),
       /**
        * Threshold value
        */
-      value: z.number().optional(),
+      value: z.number().min(1).optional(),
+      cardinality: z
+        .array(
+          z.object({
+            field: z.string().optional(),
+            value: z.number().min(0).optional(),
+          })
+        )
+        .optional(),
     }),
+    index: z.array(z.string()).optional(),
+    data_view_id: z.string().optional(),
+    filters: z.array(z.object({})).optional(),
+    saved_id: z.string().optional(),
+    /**
+     * Query language to use.
+     */
+    language: z.enum(['kuery', 'lucene']).optional().default('kuery'),
   })
 );
 export type ThresholdRule = z.infer<typeof ThresholdRule>;
@@ -298,34 +420,46 @@ export const ThreatMatchRule = BaseRule.and(
      * Rule type
      */
     type: z.enum(['threat_match']),
-    threat_filters: z.array(z.object({})),
+    query: z.string(),
     /**
-     * Defines the path to the threat indicator in the indicator documents (optional)
+     * Query to execute
      */
-    threat_indicator_path: z.string().optional(),
-    /**
-     * Indices on which the rule functions (optional)
-     */
-    threat_index: z.array(z.string()).optional(),
-    /**
-     * Query to execute (optional)
-     */
-    threat_query: z.string().optional(),
+    threat_query: z.string(),
     threat_mapping: z
       .array(
         z.object({
           entries: z
             .array(
               z.object({
-                field: z.string().optional(),
-                type: z.string().optional(),
-                value: z.string().optional(),
+                field: z.string().min(1).optional(),
+                type: z.enum(['mapping']).optional(),
+                value: z.string().min(1).optional(),
               })
             )
             .optional(),
         })
       )
-      .optional(),
+      .min(1),
+    threat_index: z.array(z.string()),
+    index: z.array(z.string()).optional(),
+    data_view_id: z.string().optional(),
+    filters: z.array(z.object({})).optional(),
+    saved_id: z.string().optional(),
+    threat_filters: z.array(z.object({})).optional(),
+    /**
+     * Defines the path to the threat indicator in the indicator documents (optional)
+     */
+    threat_indicator_path: z.string().optional(),
+    /**
+     * Query language to use.
+     */
+    threat_language: z.enum(['kuery', 'lucene']).optional().default('kuery'),
+    concurrent_searches: z.number().min(1).optional(),
+    items_per_search: z.number().min(1).optional(),
+    /**
+     * Query language to use.
+     */
+    language: z.enum(['kuery', 'lucene']).optional().default('kuery'),
   })
 );
 export type ThreatMatchRule = z.infer<typeof ThreatMatchRule>;
@@ -339,11 +473,11 @@ export const MlRule = BaseRule.and(
     /**
      * Anomaly threshold
      */
-    anomaly_threshold: z.number(),
+    anomaly_threshold: z.number().min(0),
     /**
      * Machine learning job ID
      */
-    machine_learning_job_id: z.string(),
+    machine_learning_job_id: z.union([z.string(), z.array(z.string()).min(1)]),
   })
 );
 export type MlRule = z.infer<typeof MlRule>;
@@ -354,15 +488,56 @@ export const EqlRule = BaseRule.and(
      * Rule type
      */
     type: z.enum(['eql']),
+    language: z.enum(['eql']),
     /**
      * EQL query to execute
      */
-    eql_query: z.string(),
+    query: z.string(),
+    index: z.array(z.string()).optional(),
+    data_view_id: z.string().optional(),
+    filters: z.array(z.object({})).optional(),
+    /**
+     * Contains the event classification
+     */
+    event_category_field: z.string().optional(),
+    /**
+     * Sets a secondary field for sorting events
+     */
+    tiebreaker_field: z.string().optional(),
+    /**
+     * Contains the event timestamp used for sorting a sequence of events
+     */
+    timestamp_field: z.string().optional(),
   })
 );
 export type EqlRule = z.infer<typeof EqlRule>;
 
-export const Rule = z.union([QueryRule, SavedQueryRule, MlRule, EqlRule]);
+export const NewTermsRule = BaseRule.and(
+  z.object({
+    /**
+     * Rule type
+     */
+    type: z.enum(['new_terms']),
+    query: z.string(),
+    new_terms_fields: z.array(z.string()).min(1).max(3),
+    history_window_size: z.string().min(1).optional(),
+    index: z.array(z.string()).optional(),
+    data_view_id: z.string().optional(),
+    filters: z.array(z.object({})).optional(),
+    language: z.enum(['kuery', 'lucene']).optional().default('kuery'),
+  })
+);
+export type NewTermsRule = z.infer<typeof NewTermsRule>;
+
+export const Rule = z.union([
+  QueryRule,
+  SavedQueryRule,
+  ThresholdRule,
+  ThreatMatchRule,
+  MlRule,
+  EqlRule,
+  NewTermsRule,
+]);
 export type Rule = z.infer<typeof Rule>;
 
 /**
