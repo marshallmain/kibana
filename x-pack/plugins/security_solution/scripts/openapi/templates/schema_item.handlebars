@@ -6,7 +6,7 @@
 {{~/if~}}
 
 {{~#if $ref~}}
-  {{prefix}}{{parseRef $ref}}
+  {{parseRef $ref}}
   {{~#if nullable}}.nullable(){{/if~}}
   {{~#if (eq required false)}}.optional(){{/if~}}
   {{~#if (defined default)}}.default({{{toJSON default}}}){{/if~}}
@@ -15,9 +15,9 @@
 {{~#if allOf~}}
   {{~#each allOf~}}
     {{~#if @first~}}
-      {{> schema_item prefix=prefix}}
+      {{> schema_item }}
     {{~else~}}
-      .and({{> schema_item prefix=prefix}})
+      .and({{> schema_item }})
     {{~/if~}}
   {{~/each~}}
 {{~/if~}}
@@ -25,23 +25,23 @@
 {{~#if anyOf~}}
   z.union([
     {{~#each anyOf~}}
-    {{~> schema_item prefix=prefix~}},
+    {{~> schema_item ~}},
     {{~/each~}}
   ])
 {{~/if~}}
 {{~#if oneOf~}}
   z.union([
     {{~#each oneOf~}}
-    {{~> schema_item prefix=prefix~}},
+    {{~> schema_item ~}},
     {{~/each~}}
   ])
 {{~/if~}}
 
 {{~#*inline "type_array"~}}
   {{~#if x-preprocess}}
-  z.preprocess({{prefix}}{{x-preprocess}}, z.array({{~> schema_item items prefix=prefix~}}))
+  z.preprocess({{x-preprocess}}, z.array({{~> schema_item items ~}}))
   {{else}}
-  z.array({{~> schema_item items prefix=prefix~}})
+  z.array({{~> schema_item items ~}})
   {{~/if~}}
   {{~#if minItems}}.min({{minItems}}){{/if~}}
   {{~#if maxItems}}.max({{maxItems}}){{/if~}}
@@ -66,7 +66,7 @@
       * {{{description}}} 
       */
       {{/if}}
-      {{@key}}: {{> schema_item prefix=../prefix required=(includes ../required @key)}},
+      {{@key}}: {{> schema_item required=(includes ../required @key)}},
     {{/each}}
   })
 {{~/inline~}}
@@ -84,4 +84,8 @@
   {{~#if maxLength}}.max({{maxLength}}){{/if~}}
   {{~#if (eq format 'date-time')}}.datetime(){{/if~}}
   {{~/if~}}
+{{~/inline~}}
+
+{{~#*inline "type_unknown"~}}
+  z.unknown()
 {{~/inline~}}

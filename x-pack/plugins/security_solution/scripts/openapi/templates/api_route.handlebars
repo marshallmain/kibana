@@ -6,10 +6,10 @@
  */
 
 import moment from 'moment';
-import {  {{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody } from '../../../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_request_schema.gen';
-import type { SecuritySolutionPluginRouter } from '../../../../types';
+import {  {{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody } from '@kbn/security-solution-plugin/{{schemaPath}}/route_schema.gen';
+import type { SecuritySolutionPluginRouter } from '@kbn/security-solution-plugin/server/types';
 import { {{camelCase operationId}}Implementation } from './{{snakeCase operationId}}_implementation';
-import { buildRouteValidationWithZod } from '../../../../utils/build_validation/route_validation';
+import { buildRouteValidationWithZod } from '@kbn/security-solution-plugin/server/utils/build_validation/route_validation';
 
 {{> disclaimer}}
 
@@ -34,7 +34,10 @@ export const {{camelCase operationId}}Route = (router: SecuritySolutionPluginRou
         body: buildRouteValidationWithZod({{operationId}}RequestBody),
       },
       options: {
-        tags: ['access:securitySolution'],
+        tags: [{{#each tags}}'{{.}}'{{/each}}],
+        {{#if (defined authRequired)}}
+        authRequired: {{authRequired}},
+        {{/if}}
         timeout: {
           // FUNFACT: If we do not add a very long timeout what will happen
           // is that Chrome which receive a 408 error and then do a retry.

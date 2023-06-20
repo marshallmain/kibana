@@ -263,6 +263,8 @@ paths:
       description: Retrieves a paginated subset of detection rules. By default, the first page is returned with 20 results per page.
       tags:
         - Rules API
+      implementationPath: server/lib/detection_engine/rule_management/api/rules/find_rules
+      domain: RuleManagement
       parameters:
         - name: page
           in: query
@@ -642,6 +644,7 @@ paths:
     get:
       operationId: GetRuleExecutionResults
       description: Returns execution results of a given rule (aggregated by execution UUID) from Event Log.
+      x-codegen-enabled: false
       parameters:
         - in: path
           name: ruleId
@@ -1123,29 +1126,43 @@ components:
                     type: string
                   reference:
                     type: string
+                required:
+                  - id
+                  - name
+                  - reference
               technique:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  name:
-                    type: string
-                  reference:
-                    type: string
-        language:
-          type: string
-          enum: [kuery, lucene]
-          description: Determines the query language (optional)
-        filters:
-          type: array
-          items:
-            type: object
-          description: The query and filter context array used to define the conditions for when alerts are created from events (optional)
-        index:
-          type: array
-          items:
-            type: string
-          description: Indices on which the rule functions (optional)
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    reference:
+                      type: string
+                    subtechnique:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          reference:
+                            type: string
+                        required:
+                          - id
+                          - name
+                          - reference
+                  required:
+                    - id
+                    - name
+                    - reference
+            required:
+              - framework
+              - tactic
       required:
         - id
         - name
@@ -1171,7 +1188,7 @@ components:
             filters:
               type: array
               items:
-                type: object
+                type: unknown
             saved_id:
               type: string
             response_actions:
@@ -1213,7 +1230,7 @@ components:
             filters:
               type: array
               items:
-                type: object
+                type: unknown
             saved_id:
               type: string
             response_actions:
@@ -1226,7 +1243,6 @@ components:
             query:
               type: string
               description: Query to execute
-              default: ''
             language:
               type: string
               enum:
@@ -1282,7 +1298,7 @@ components:
             filters:
               type: array
               items:
-                type: object
+                type: unknown
             saved_id:
               type: string
             language:
@@ -1344,13 +1360,13 @@ components:
             filters:
               type: array
               items:
-                type: object
+                type: unknown
             saved_id:
               type: string
             threat_filters:
               type: array
               items:
-                type: object
+                type: unknown
                 description: Query and filter context array used to filter documents from the Elasticsearch index containing the threat values
             threat_indicator_path:
               type: string
@@ -1360,7 +1376,6 @@ components:
               enum:
                 - kuery
                 - lucene
-              default: kuery
               description: Query language to use.
             concurrent_searches:
               type: integer
@@ -1431,7 +1446,7 @@ components:
             filters:
               type: array
               items:
-                type: object
+                type: unknown
             event_category_field:
               type: string
               description: Contains the event classification
@@ -1475,7 +1490,7 @@ components:
             filters:
               type: array
               items:
-                type: object
+                type: unknown
             language:
               type: string
               enum:

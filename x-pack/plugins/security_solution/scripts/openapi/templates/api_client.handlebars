@@ -5,20 +5,20 @@
  * 2.0.
  */
 
-import { KibanaServices } from '../lib/kibana';
+import { KibanaServices } from '../../../common/lib/kibana';;
 {{#each apiOperations}}
-{{#if (or requestQuery requestBody requestParams)}}
 import type { 
   {{#if requestQuery}}{{operationId}}RequestQueryInput,{{/if}}
   {{#if requestParams}}{{operationId}}RequestParamsInput,{{/if}}
   {{#if requestBody}}{{operationId}}RequestBodyInput,{{/if}}
-} from '../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_request_schema.gen';
-{{/if}}
-import type { 
   {{operationId}}Response,
-} from '../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_response_schema.gen';
+} from '@kbn/security-solution-plugin/{{schemaPath}}/route_schema.gen';
 {{/each}}
+{{#once apiOperations}}
+{{#if requestParams}}
 import { replaceParams } from './replace_params';
+{{/if}}
+{{/once}}
 
 {{> disclaimer}}
 

@@ -14,6 +14,11 @@ export function registerHelpers(handlebarsInstance: typeof Handlebars) {
     return values.join('');
   });
   handlebarsInstance.registerHelper('parseRef', (refName: string) => {
+    if (refName.includes('domain_schema.yaml')) {
+      return 'DomainSchema.' + refName.split('/').pop();
+    } else if (refName.includes('common_schema.yaml')) {
+      return 'CommonSchema.' + refName.split('/').pop();
+    }
     return refName.split('/').pop();
   });
   handlebarsInstance.registerHelper('snakeCase', snakeCase);
@@ -36,5 +41,19 @@ export function registerHelpers(handlebarsInstance: typeof Handlebars) {
   });
   handlebarsInstance.registerHelper('defined', (val) => {
     return val !== undefined;
+  });
+  handlebarsInstance.registerHelper('once', function (context, options) {
+    var ret = '';
+    var rendered = false;
+
+    for (var i = 0, j = context.length; i < j; i++) {
+      const newValue = options.fn(context[i]);
+      if (!rendered && newValue != '') {
+        ret = ret + newValue;
+        rendered = true;
+      }
+    }
+
+    return ret;
   });
 }

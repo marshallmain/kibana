@@ -7,9 +7,8 @@
 
 import type { KibanaRequest, KibanaResponseFactory } from '@kbn/core/server';
 import type { IKibanaResponse } from '@kbn/core-http-server';
-import type { SecuritySolutionRequestHandlerContext } from '../../../../types';
-import type { {{operationId}}Response } from '../../../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_response_schema.gen';
-import type { {{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody } from '../../../../../common/generated_schema/{{snakeCase operationId}}/{{snakeCase operationId}}_request_schema.gen';
+import type { SecuritySolutionRequestHandlerContext } from '@kbn/security-solution-plugin/server/types';
+import type { {{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody, {{operationId}}Response } from '@kbn/security-solution-plugin/{{schemaPath}}/route_schema.gen';
 
 export const {{camelCase operationId}}Implementation = async (
   context: SecuritySolutionRequestHandlerContext,
