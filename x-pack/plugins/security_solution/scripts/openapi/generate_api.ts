@@ -103,7 +103,7 @@ type OpenApiDocument = OpenAPIV3.Document<AdditionalProperties>;
       // Format the output folder using prettier as the generator produces unformatted code
       formatOutput(routeFolder);
 
-      await Promise.all(
+      /*await Promise.all(
         apiOperations.map(async (apiOperation) => {
           if (apiOperation.generateImplementations) {
             // Generate API routes
@@ -139,7 +139,7 @@ type OpenApiDocument = OpenAPIV3.Document<AdditionalProperties>;
             formatOutput(routeImplementationFolder);
           }
         })
-      );
+      );*/
 
       // Generate API Client functions for operations in this route folder
       /* const apiClientFolder = resolve(API_CLIENT_FOLDER, domain, route);
@@ -223,9 +223,6 @@ function getApiOperationsList(parsedSchema: OpenApiDocument, schemaPath: string)
         } = operation;
         if (!operationId) {
           throw new Error(`Missing operationId for ${method} ${path}`);
-        }
-        if (!implementationPath) {
-          throw new Error(`Missing implementationPath for ${method} ${path}`);
         }
 
         return {

@@ -7,18 +7,19 @@
 
 import type { Logger } from '@kbn/core/server';
 import { transformError } from '@kbn/securitysolution-es-utils';
+import type { IKibanaResponse } from '@kbn/core-http-server';
 
-import { DETECTION_ENGINE_RULES_URL_FIND } from '../../../../../../../common/constants';
-import type { FindRulesRequestQueryDecoded } from '../../../../../../../common/detection_engine/rule_management';
 import {
   FindRulesRequestQuery,
-  validateFindRulesRequestQuery,
-} from '../../../../../../../common/detection_engine/rule_management';
+  FindRulesResponse,
+} from '@kbn/security-solution-plugin/common/api/rule_management/find_rules/route_schema.gen';
+import type { SecuritySolutionPluginRouter } from '@kbn/security-solution-plugin/server/types';
+import { buildRouteValidationWithZod } from '@kbn/security-solution-plugin/server/utils/build_validation/route_validation';
 
-import type { SecuritySolutionPluginRouter } from '../../../../../../types';
+import { DETECTION_ENGINE_RULES_URL_FIND } from '../../../../../../../common/constants';
+import { validateFindRulesRequestQuery } from '../../../../../../../common/detection_engine/rule_management';
 import { findRules } from '../../../logic/search/find_rules';
 import { buildSiemResponse } from '../../../../routes/utils';
-import { buildRouteValidation } from '../../../../../../utils/build_validation/route_validation';
 import { transformFindAlerts } from '../../../utils/utils';
 
 export const findRulesRoute = (router: SecuritySolutionPluginRouter, logger: Logger) => {
@@ -26,15 +27,13 @@ export const findRulesRoute = (router: SecuritySolutionPluginRouter, logger: Log
     {
       path: DETECTION_ENGINE_RULES_URL_FIND,
       validate: {
-        query: buildRouteValidation<typeof FindRulesRequestQuery, FindRulesRequestQueryDecoded>(
-          FindRulesRequestQuery
-        ),
+        query: buildRouteValidationWithZod(FindRulesRequestQuery),
       },
       options: {
         tags: ['access:securitySolution'],
       },
     },
-    async (context, request, response) => {
+    async (context, request, response): Promise<IKibanaResponse<FindRulesResponse>> => {
       const siemResponse = buildSiemResponse(response);
 
       const validationErrors = validateFindRulesRequestQuery(request.query);

@@ -6,7 +6,7 @@
  */
 
 import type { FindResult, RulesClient } from '@kbn/alerting-plugin/server';
-import type { FindRulesSortFieldOrUndefined } from '../../../../../../common/detection_engine/rule_management';
+import type { FindRulesSortField } from '@kbn/security-solution-plugin/common/api/rule_management/find_rules/route_schema.gen';
 
 import type {
   FieldsOrUndefined,
@@ -24,7 +24,7 @@ export interface FindRuleOptions {
   rulesClient: RulesClient;
   filter: QueryFilterOrUndefined;
   fields: FieldsOrUndefined;
-  sortField: FindRulesSortFieldOrUndefined;
+  sortField: FindRulesSortField | undefined;
   sortOrder: SortOrderOrUndefined;
   page: PageOrUndefined;
   perPage: PerPageOrUndefined;
