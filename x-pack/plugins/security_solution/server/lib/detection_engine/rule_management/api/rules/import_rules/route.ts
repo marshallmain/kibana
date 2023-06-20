@@ -14,6 +14,7 @@ import { transformError } from '@kbn/securitysolution-es-utils';
 import { validate } from '@kbn/securitysolution-io-ts-utils';
 import type { ImportQuerySchemaDecoded } from '@kbn/securitysolution-io-ts-types';
 import { importQuerySchema } from '@kbn/securitysolution-io-ts-types';
+import { ImportRulesRequestQuery } from '@kbn/security-solution-plugin/common/api/rule_management/import_rules/route_schema.gen';
 
 import { DETECTION_ENGINE_RULES_URL } from '../../../../../../../common/constants';
 import { ImportRulesResponse } from '../../../../../../../common/detection_engine/rule_management';
@@ -30,7 +31,10 @@ import {
   migrateLegacyActionsIds,
 } from '../../../utils/utils';
 import { createRulesAndExceptionsStreamFromNdJson } from '../../../logic/import/create_rules_stream_from_ndjson';
-import { buildRouteValidation } from '../../../../../../utils/build_validation/route_validation';
+import {
+  buildRouteValidation,
+  buildRouteValidationWithZod,
+} from '../../../../../../utils/build_validation/route_validation';
 import type { RuleExceptionsPromiseFromStreams } from '../../../logic/import/import_rules_utils';
 import { importRules as importRulesHelper } from '../../../logic/import/import_rules_utils';
 import { getReferencedExceptionLists } from '../../../logic/import/gather_referenced_exceptions';
@@ -48,9 +52,7 @@ export const importRulesRoute = (
     {
       path: `${DETECTION_ENGINE_RULES_URL}/_import`,
       validate: {
-        query: buildRouteValidation<typeof importQuerySchema, ImportQuerySchemaDecoded>(
-          importQuerySchema
-        ),
+        query: buildRouteValidationWithZod(ImportRulesRequestQuery),
         body: schema.any(), // validation on file object is accomplished later in the handler.
       },
       options: {
