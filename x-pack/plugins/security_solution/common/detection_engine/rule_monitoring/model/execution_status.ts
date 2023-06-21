@@ -8,7 +8,7 @@
 import type { RuleLastRunOutcomes } from '@kbn/alerting-plugin/common';
 import { PositiveInteger } from '@kbn/securitysolution-io-ts-types';
 import type * as t from 'io-ts';
-import { RuleExecutionStatus } from '../../../generated_schema/common_schema.gen';
+import { RuleExecutionStatus } from '../../../api/rule_monitoring/domain_schema.gen';
 import { assertUnreachable } from '../../../utility_types';
 
 export type RuleExecutionStatusOrder = t.TypeOf<typeof RuleExecutionStatusOrder>;

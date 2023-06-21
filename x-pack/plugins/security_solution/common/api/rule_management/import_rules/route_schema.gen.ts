@@ -14,15 +14,15 @@ import { z } from 'zod';
 
 export const ImportRulesRequestQuery = z.object({
   /**
-   * TODO
+   * Determines whether existing rules with the same `rule_id` are overwritten.
    */
   overwrite: z.boolean().optional().default(false),
   /**
-   * TODO
+   * Determines whether existing exception lists with the same `list_id` are overwritten.
    */
   overwrite_exceptions: z.boolean().optional().default(false),
   /**
-   * TODO
+   * Determines whether existing actions with the same `kibana.alert.rule.actions.id` are overwritten.
    */
   overwrite_action_connectors: z.boolean().optional().default(false),
   /**
@@ -41,9 +41,5 @@ export const ImportRulesRequestBody = z.undefined();
 export type ImportRulesRequestBody = z.infer<typeof ImportRulesRequestBody>;
 export type ImportRulesRequestBodyInput = z.input<typeof ImportRulesRequestBody>;
 
-export const ImportRulesResponse = z.object({
-  page: z.number().optional(),
-  perPage: z.number().optional(),
-  total: z.number().optional(),
-});
+export const ImportRulesResponse = z.object({});
 export type ImportRulesResponse = z.infer<typeof ImportRulesResponse>;
