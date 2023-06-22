@@ -9,15 +9,13 @@ import { chunk } from 'lodash/fp';
 import { extname } from 'path';
 import { schema } from '@kbn/config-schema';
 import { createPromiseFromStreams } from '@kbn/utils';
+import type { IKibanaResponse } from '@kbn/core/server';
 
 import { transformError } from '@kbn/securitysolution-es-utils';
-import { validate } from '@kbn/securitysolution-io-ts-utils';
-import type { ImportQuerySchemaDecoded } from '@kbn/securitysolution-io-ts-types';
-import { importQuerySchema } from '@kbn/securitysolution-io-ts-types';
+import { ImportRulesRequestQuery } from '../../../../../../../common/api';
+import type { ImportRulesResponse } from '../../../../../../../common/api';
 
 import { DETECTION_ENGINE_RULES_URL } from '../../../../../../../common/constants';
-import { ImportRulesResponse } from '../../../../../../../common/detection_engine/rule_management';
-
 import type { HapiReadableStream, SecuritySolutionPluginRouter } from '../../../../../../types';
 import type { ConfigType } from '../../../../../../config';
 import type { SetupPlugins } from '../../../../../../plugin';
@@ -30,7 +28,7 @@ import {
   migrateLegacyActionsIds,
 } from '../../../utils/utils';
 import { createRulesAndExceptionsStreamFromNdJson } from '../../../logic/import/create_rules_stream_from_ndjson';
-import { buildRouteValidation } from '../../../../../../utils/build_validation/route_validation';
+import { buildRouteValidationWithZod } from '../../../../../../utils/build_validation/route_validation';
 import type { RuleExceptionsPromiseFromStreams } from '../../../logic/import/import_rules_utils';
 import { importRules as importRulesHelper } from '../../../logic/import/import_rules_utils';
 import { getReferencedExceptionLists } from '../../../logic/import/gather_referenced_exceptions';
@@ -48,9 +46,7 @@ export const importRulesRoute = (
     {
       path: `${DETECTION_ENGINE_RULES_URL}/_import`,
       validate: {
-        query: buildRouteValidation<typeof importQuerySchema, ImportQuerySchemaDecoded>(
-          importQuerySchema
-        ),
+        query: buildRouteValidationWithZod(ImportRulesRequestQuery),
         body: schema.any(), // validation on file object is accomplished later in the handler.
       },
       options: {
@@ -61,7 +57,7 @@ export const importRulesRoute = (
         },
       },
     },
-    async (context, request, response) => {
+    async (context, request, response): Promise<IKibanaResponse<ImportRulesResponse>> => {
       const siemResponse = buildSiemResponse(response);
 
       try {
@@ -191,12 +187,7 @@ export const importRulesRoute = (
           action_connectors_warnings: actionConnectorWarnings,
         };
 
-        const [validated, errors] = validate(importRules, ImportRulesResponse);
-        if (errors != null) {
-          return siemResponse.error({ statusCode: 500, body: errors });
-        } else {
-          return response.ok({ body: validated ?? {} });
-        }
+        return response.ok({ body: importRules });
       } catch (err) {
         const error = transformError(err);
         return siemResponse.error({

@@ -1,0 +1,110 @@
+openapi: 3.0.0
+info:
+  title: Elastic Security Rule Management API (https://www.elastic.co/guide/en/security/current/security-apis.html)
+  version: 8.9.0
+servers:
+  - url: 'http://{kibana_host}:{port}'
+    variables:
+      kibana_host:
+        default: localhost
+      port:
+        default: '5601'
+paths:
+  /api/detection_engine/rules/_find:
+    get:
+      operationId: FindRules
+      summary: Find rules
+      description: Retrieves a paginated subset of detection rules. By default, the first page is returned with 20 results per page.
+      tags:
+        - access:securitySolution
+      authRequired: true
+      implementationPath: server/lib/detection_engine/rule_management/api/rules/find_rules
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: The page number to return.
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+            x-coerce: true
+        - name: per_page
+          in: query
+          required: false
+          description: The number of rules to return per page.
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            x-coerce: true
+        - name: sort_field
+          in: query
+          required: false
+          description: Determines which field is used to sort the results.
+          schema:
+            $ref: '#/components/schemas/FindRulesSortField'
+        - name: sort_order
+          in: query
+          required: false
+          description: Determines the sort order, which can be `desc` or `asc`.
+          schema:
+            $ref: '../../common_schema.yaml#/components/schemas/SortOrder'
+        - name: filter
+          in: query
+          required: false
+          description: Filters the returned results according to the value of the specified field, using the `alert.attributes.<field name>:<field value>` syntax.
+          schema:
+            type: string
+        - name: fields
+          in: query
+          required: false
+          description: An array of fields to include in the results.
+          schema:
+            type: array
+            x-preprocess: CommonSchema.CsvToArray
+            items:
+              type: string
+      responses:
+        200:
+          description: Indicates a successful call.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page:
+                    type: integer
+                  perPage:
+                    type: integer
+                  total:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '../../common_schema.yaml#/components/schemas/Rule'
+                required:
+                  - page
+                  - perPage
+                  - total
+                  - data
+
+components:
+  schemas:
+    FindRulesSortField:
+      type: string
+      enum:
+        - created_at
+        - createdAt
+        - enabled
+        - execution_summary.last_execution.date
+        - execution_summary.last_execution.metrics.execution_gap_duration_s
+        - execution_summary.last_execution.metrics.total_indexing_duration_ms
+        - execution_summary.last_execution.metrics.total_search_duration_ms
+        - execution_summary.last_execution.status
+        - name
+        - risk_score
+        - riskScore
+        - severity
+        - updated_at
+        - updatedAt

@@ -1,0 +1,17 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Elastic Security Rule Management API (https://www.elastic.co/guide/en/security/current/security-apis.html)",
+    "version": "8.9.0"
+  },
+  "servers": [
+    {
+      "url": "http://{kibana_host}:{port}",
+      "variables": { "kibana_host": { "default": "localhost" }, "port": { "default": "5601" } }
+    }
+  ],
+  "paths": null,
+  "components": {
+    "schemas": { "AnotherField": { "$ref": "../common_schema.yaml#components/schemas/SortOrder" } }
+  }
+}
