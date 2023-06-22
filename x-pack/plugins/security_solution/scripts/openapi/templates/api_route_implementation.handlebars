@@ -1,0 +1,19 @@
+/*
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
+ */
+
+import type { KibanaRequest, KibanaResponseFactory } from '@kbn/core/server';
+import type { IKibanaResponse } from '@kbn/core-http-server';
+import type { SecuritySolutionRequestHandlerContext } from '@kbn/security-solution-plugin/server/types';
+import type { {{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody, {{operationId}}Response } from '@kbn/security-solution-plugin/{{schemaPath}}/route_schema.gen';
+
+export const {{camelCase operationId}}Implementation = async (
+  context: SecuritySolutionRequestHandlerContext,
+  request: KibanaRequest<{{operationId}}RequestParams, {{operationId}}RequestQuery, {{operationId}}RequestBody, '{{method}}'>,
+  response: KibanaResponseFactory,
+): Promise<IKibanaResponse<{{operationId}}Response>>  => {
+  throw new Error('Not implemented');
+};

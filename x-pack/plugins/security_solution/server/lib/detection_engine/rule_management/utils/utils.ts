@@ -116,7 +116,7 @@ export const transformFindAlerts = (
   page: number;
   perPage: number;
   total: number;
-  data: Array<Partial<RuleResponse>>;
+  data: RuleResponse[];
 } | null => {
   return {
     page: ruleFindResults.page,

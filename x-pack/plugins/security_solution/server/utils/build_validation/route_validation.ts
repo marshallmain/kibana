@@ -8,6 +8,7 @@
 import { fold } from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import type * as rt from 'io-ts';
+import type { TypeOf, ZodType } from 'zod';
 import { exactCheck, formatErrors } from '@kbn/securitysolution-io-ts-utils';
 import type {
   RouteValidationFunction,
@@ -65,3 +66,14 @@ export const buildRouteValidationWithExcess =
         (validatedInput: A) => validationResult.ok(validatedInput)
       )
     );
+
+export const buildRouteValidationWithZod =
+  <T extends ZodType, A = TypeOf<T>>(schema: T): RouteValidationFunction<A> =>
+  (inputValue: unknown, validationResult: RouteValidationResultFactory) => {
+    const decoded = schema.safeParse(inputValue);
+    if (decoded.success) {
+      return validationResult.ok(decoded.data);
+    } else {
+      return validationResult.badRequest(JSON.stringify(decoded.error.errors));
+    }
+  };
