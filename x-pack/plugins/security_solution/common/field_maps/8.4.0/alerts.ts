@@ -14,6 +14,11 @@ export const alertsFieldMap840 = {
     array: true,
     required: false,
   },
+  'kibana.alert.audit_ids': {
+    type: 'keyword',
+    array: true,
+    required: false,
+  },
 } as const;
 
 export type AlertsFieldMap840 = typeof alertsFieldMap840;

@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import { v4 as uuidv4 } from 'uuid';
 import { get } from 'lodash';
 import { transformError } from '@kbn/securitysolution-es-utils';
 import { ALERT_WORKFLOW_STATUS } from '@kbn/rule-data-utils';
@@ -28,6 +29,8 @@ import {
   getSessionIDfromKibanaRequest,
   createAlertStatusPayloads,
 } from '../../../telemetry/insights';
+import { ALERT_AUDIT_SO_TYPE } from '../../audit/audit_type';
+import type { StatusEvent } from '../../../../../common/api/audit';
 
 export const setSignalsStatusRoute = (
   router: SecuritySolutionPluginRouter,
@@ -64,6 +67,7 @@ export const setSignalsStatusRoute = (
         const siemResponse = buildSiemResponse(response);
         const validationErrors = setSignalStatusValidateTypeDependents(request.body);
         const spaceId = securitySolution?.getSpaceId() ?? 'default';
+        const soClient = core.savedObjects.client;
 
         if (validationErrors.length) {
           return siemResponse.error({ statusCode: 400, body: validationErrors });
@@ -98,8 +102,24 @@ export const setSignalsStatusRoute = (
         }
 
         try {
+          const auditEventId = uuidv4();
+          const auditTimestamp = new Date();
+          const auditEvent = await soClient.create<StatusEvent>(ALERT_AUDIT_SO_TYPE, {
+            '@timestamp': auditTimestamp.toISOString(),
+            category: 'workflow_status',
+            action: 'change',
+            status,
+            id: auditEventId,
+            username: username ?? 'unknown',
+          });
           if (signalIds) {
-            const body = await updateSignalsStatusByIds(status, signalIds, spaceId, esClient);
+            const body = await updateSignalsStatusByIds(
+              status,
+              signalIds,
+              spaceId,
+              esClient,
+              auditEventId
+            );
             return response.ok({ body });
           } else {
             const body = await updateSignalsStatusByQuery(
@@ -107,7 +127,8 @@ export const setSignalsStatusRoute = (
               query,
               { conflicts: conflicts ?? 'abort' },
               spaceId,
-              esClient
+              esClient,
+              auditEventId
             );
             return response.ok({ body });
           }
@@ -127,13 +148,14 @@ const updateSignalsStatusByIds = async (
   status: SetSignalsStatusSchemaDecoded['status'],
   signalsId: string[],
   spaceId: string,
-  esClient: ElasticsearchClient
+  esClient: ElasticsearchClient,
+  auditId: string
 ) =>
   esClient.updateByQuery({
     index: `${DEFAULT_ALERTS_INDEX}-${spaceId}`,
     refresh: false,
     body: {
-      script: getUpdateSignalStatusScript(status),
+      script: getUpdateSignalStatusScript(status, auditId),
       query: {
         bool: {
           filter: { terms: { _id: signalsId } },
@@ -153,14 +175,15 @@ const updateSignalsStatusByQuery = async (
   query: object | undefined,
   options: { conflicts: 'abort' | 'proceed' },
   spaceId: string,
-  esClient: ElasticsearchClient
+  esClient: ElasticsearchClient,
+  auditId: string
 ) =>
   esClient.updateByQuery({
     index: `${DEFAULT_ALERTS_INDEX}-${spaceId}`,
     conflicts: options.conflicts,
     refresh: false,
     body: {
-      script: getUpdateSignalStatusScript(status),
+      script: getUpdateSignalStatusScript(status, auditId),
       query: {
         bool: {
           filter: query,
@@ -170,12 +193,23 @@ const updateSignalsStatusByQuery = async (
     ignore_unavailable: true,
   });
 
-const getUpdateSignalStatusScript = (status: SetSignalsStatusSchemaDecoded['status']) => ({
+const getUpdateSignalStatusScript = (
+  status: SetSignalsStatusSchemaDecoded['status'],
+  auditId: string
+) => ({
+  params: {
+    auditId,
+  },
   source: `if (ctx._source['${ALERT_WORKFLOW_STATUS}'] != null) {
       ctx._source['${ALERT_WORKFLOW_STATUS}'] = '${status}'
     }
     if (ctx._source.signal != null && ctx._source.signal.status != null) {
       ctx._source.signal.status = '${status}'
+    }
+    if (ctx._source["kibana.alert.audit_ids"] != null) {
+      ctx._source["kibana.alert.audit_ids"].add(params.auditId);
+    } else {
+      ctx._source["kibana.alert.audit_ids"] = [params.auditId];
     }`,
   lang: 'painless',
 });

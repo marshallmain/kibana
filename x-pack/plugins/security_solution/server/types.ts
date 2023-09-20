@@ -19,6 +19,7 @@ import type { ExceptionListClient, ListsApiRequestHandlerContext } from '@kbn/li
 import type { AlertsClient, IRuleDataService } from '@kbn/rule-registry-plugin/server';
 
 import type { Readable } from 'stream';
+import type { SecurityRequestHandlerContext } from '@kbn/security-plugin/server/types';
 import type { Immutable } from '../common/endpoint/types';
 import { AppClient } from './client';
 import type { ConfigType } from './config';
@@ -57,6 +58,7 @@ export type SecuritySolutionRequestHandlerContext = CustomRequestHandlerContext<
   licensing: LicensingApiRequestHandlerContext;
   lists?: ListsApiRequestHandlerContext;
   fleet?: FleetRequestHandlerContext['fleet'];
+  security?: SecurityRequestHandlerContext;
 }>;
 
 export type SecuritySolutionPluginRouter = IRouter<SecuritySolutionRequestHandlerContext>;

@@ -506,3 +506,5 @@ export const DEFAULT_ALERT_TAGS_VALUE = [
   i18n.FALSE_POSITIVE,
   i18n.FURTHER_INVESTIGATION_REQUIRED,
 ] as const;
+
+export const GET_AUDIT_EVENTS_ROUTE = '/internal/audit';

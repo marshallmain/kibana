@@ -5,9 +5,10 @@
  * 2.0.
  */
 
-import type { StartServicesAccessor, Logger } from '@kbn/core/server';
+import type { StartServicesAccessor, Logger, KibanaRequest } from '@kbn/core/server';
 import type { IRuleDataClient, RuleDataPluginService } from '@kbn/rule-registry-plugin/server';
 
+import type { AuthenticatedUser } from '@kbn/security-plugin/common';
 import type { SecuritySolutionPluginRouter } from '../types';
 
 import { registerFleetIntegrationsRoutes } from '../lib/detection_engine/fleet_integrations';
@@ -82,6 +83,7 @@ import {
   riskEngineStatusRoute,
 } from '../lib/risk_engine/routes';
 import { riskScoreCalculationRoute } from '../lib/risk_engine/routes/risk_score_calculation_route';
+import { getAuditEventsRoute } from '../lib/detection_engine/audit/api/get_audit_events';
 
 export const initRoutes = (
   router: SecuritySolutionPluginRouter,
@@ -97,7 +99,8 @@ export const initRoutes = (
   getStartServices: StartServicesAccessor<StartPlugins>,
   securityRuleTypeOptions: CreateSecurityRuleTypeWrapperProps,
   previewRuleDataClient: IRuleDataClient,
-  previewTelemetryReceiver: ITelemetryReceiver
+  previewTelemetryReceiver: ITelemetryReceiver,
+  getCurrentUser: { fn: (request: KibanaRequest) => AuthenticatedUser | null }
 ) => {
   registerFleetIntegrationsRoutes(router, logger);
   registerLegacyRuleActionsRoutes(router, logger);
@@ -143,7 +146,7 @@ export const initRoutes = (
   // POST /api/detection_engine/signals/status
   // Example usage can be found in security_solution/server/lib/detection_engine/scripts/signals
   setSignalsStatusRoute(router, logger, security, telemetrySender);
-  setAlertTagsRoute(router);
+  setAlertTagsRoute(router, getCurrentUser);
   querySignalsRoute(router, ruleDataClient);
   getSignalsMigrationStatusRoute(router);
   createSignalsMigrationRoute(router, security);
@@ -188,4 +191,5 @@ export const initRoutes = (
     riskEngineEnableRoute(router, getStartServices);
     riskEngineDisableRoute(router, getStartServices);
   }
+  getAuditEventsRoute(router);
 };

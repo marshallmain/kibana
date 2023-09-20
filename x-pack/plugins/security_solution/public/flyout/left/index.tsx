@@ -17,7 +17,7 @@ import type { LeftPanelTabsType } from './tabs';
 import { tabs } from './tabs';
 import { useLeftPanelContext } from './context';
 
-export type LeftPanelPaths = 'visualize' | 'insights' | 'investigation' | 'response';
+export type LeftPanelPaths = 'visualize' | 'insights' | 'investigation' | 'response' | 'history';
 export const LeftPanelKey: LeftPanelProps['key'] = 'document-details-left';
 export const LeftPanelVisualizeTab: LeftPanelPaths = 'visualize';
 export const LeftPanelInsightsTab: LeftPanelPaths = 'insights';

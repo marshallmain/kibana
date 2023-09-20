@@ -7,7 +7,7 @@
 
 import type { Observable } from 'rxjs';
 import { QUERY_RULE_TYPE_ID, SAVED_QUERY_RULE_TYPE_ID } from '@kbn/securitysolution-rules';
-import type { Logger } from '@kbn/core/server';
+import type { KibanaRequest, Logger } from '@kbn/core/server';
 import { SavedObjectsClient } from '@kbn/core/server';
 import type { UsageCounter } from '@kbn/usage-collection-plugin/server';
 import { ECS_COMPONENT_TEMPLATE_NAME } from '@kbn/alerting-plugin/server';
@@ -16,8 +16,10 @@ import type { IRuleDataClient } from '@kbn/rule-registry-plugin/server';
 import { Dataset } from '@kbn/rule-registry-plugin/server';
 import type { ListPluginSetup } from '@kbn/lists-plugin/server';
 import type { ILicense } from '@kbn/licensing-plugin/server';
+import type { AuthenticatedUser } from '@kbn/security-plugin/common';
 
 import { endpointPackagePoliciesStatsSearchStrategyProvider } from './search_strategy/endpoint_package_policies_stats';
+
 import { turnOffPolicyProtectionsIfNotSupported } from './endpoint/migrations/turn_off_policy_protections';
 import { endpointSearchStrategyProvider } from './search_strategy/endpoint';
 import { getScheduleNotificationResponseActionsService } from './lib/detection_engine/rule_response_actions/schedule_notification_response_actions';
@@ -124,6 +126,10 @@ export class Plugin implements ISecuritySolutionPlugin {
   private checkMetadataTransformsTask: CheckMetadataTransformsTask | undefined;
   private telemetryUsageCounter?: UsageCounter;
   private endpointContext: EndpointAppContext;
+
+  private getCurrentUser: { fn: (request: KibanaRequest) => AuthenticatedUser | null } = {
+    fn: () => null,
+  };
 
   constructor(context: PluginInitializerContext) {
     const serverConfig = createConfig(context);
@@ -309,7 +315,8 @@ export class Plugin implements ISecuritySolutionPlugin {
       core.getStartServices,
       securityRuleTypeOptions,
       previewRuleDataClient,
-      this.telemetryReceiver
+      this.telemetryReceiver,
+      this.getCurrentUser
     );
 
     registerEndpointRoutes(router, this.endpointContext);
@@ -425,6 +432,8 @@ export class Plugin implements ISecuritySolutionPlugin {
     plugins: SecuritySolutionPluginStartDependencies
   ): SecuritySolutionPluginStart {
     const { config, logger, appFeaturesService } = this;
+
+    this.getCurrentUser.fn = plugins.security.authc.getCurrentUser;
 
     this.ruleMonitoringService.start(core, plugins);
 
