@@ -140,7 +140,7 @@ const updateSignalsStatusByIds = async (
 ) =>
   esClient.updateByQuery({
     index: `${DEFAULT_ALERTS_INDEX}-${spaceId}`,
-    refresh: false,
+    refresh: true,
     body: {
       script: getUpdateSignalStatusScript(status, user),
       query: {
@@ -168,7 +168,7 @@ const updateSignalsStatusByQuery = async (
   esClient.updateByQuery({
     index: `${DEFAULT_ALERTS_INDEX}-${spaceId}`,
     conflicts: options.conflicts,
-    refresh: false,
+    refresh: true,
     body: {
       script: getUpdateSignalStatusScript(status, user),
       query: {
