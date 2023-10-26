@@ -6,7 +6,8 @@
  */
 
 import { z } from "zod";
-import { requireOptional, isValidDateMath } from "@kbn/zod-helpers"
+import { requireOptional, isValidDateMath } from "@kbn/zod-helpers";
+import type { RequiredOptional } from "@kbn/zod-helpers";
 
 {{> disclaimer}}
 
@@ -22,7 +23,11 @@ import {
   * {{{.}}}
   */
 {{/description}}
+{{#if (eq x-modify "requiredOptional")}}
+export type {{@key}} = RequiredOptional<z.infer<typeof {{@key}}>>;
+{{else}}
 export type {{@key}} = z.infer<typeof {{@key}}>;
+{{/if}}
 export const {{@key}} = {{> zod_schema_item}};
 {{#if enum}}
 {{#unless (isSingle enum)}}
@@ -73,7 +78,7 @@ export type {{operationId}}RequestBodyInput = z.input<typeof {{operationId}}Requ
 * {{{response.description}}}
 */
 {{/if}}
-export type {{operationId}}Response = z.infer<typeof {{operationId}}Response>;
+export type {{operationId}}Response = RequiredOptional<z.infer<typeof {{operationId}}Response>>;
 export const {{operationId}}Response = {{> zod_schema_item response }};
 {{/if}}
 {{/each}}

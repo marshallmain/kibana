@@ -124,7 +124,6 @@ components:
               - field
               - operator
               - value
-            x-modify: requiredOptional
           description: Overrides generated alerts' risk_score with a value from the source event
         severity_mapping:
           type: array
@@ -244,15 +243,6 @@ components:
       allOf:
         - $ref: '#/components/schemas/BaseRequiredFields'
         - $ref: '#/components/schemas/BaseOptionalFields'
-          # `requiredOptional` is needed to force all fields to be accounted for in
-          # conversions from the internal rule schema to the response schema. Rather than
-          # use `partial`, which makes each field optional, we make each field required
-          # but possibly undefined. The result is that if a field is forgotten in the
-          # conversion from internal schema to response schema TS will report an error. If
-          # we just used `partial` instead, then optional fields can be accidentally
-          # omitted from the conversion - and any actual values in those fields internally
-          # will be stripped in the response.
-          x-modify: requiredOptional
         - $ref: '#/components/schemas/BaseDefaultableFields'
           x-modify: required
 
@@ -408,10 +398,10 @@ components:
         - $ref: '#/components/schemas/EqlOptionalFields'
 
     EqlRuleResponseFields:
+      x-modify: requiredOptional
       allOf:
         - $ref: '#/components/schemas/EqlRequiredFields'
         - $ref: '#/components/schemas/EqlOptionalFields'
-          x-modify: requiredOptional
 
     EqlRulePatchFields:
       allOf:
@@ -497,10 +487,10 @@ components:
         - $ref: '#/components/schemas/QueryRuleDefaultableFields'
 
     QueryRuleResponseFields:
+      x-modify: requiredOptional
       allOf:
         - $ref: '#/components/schemas/QueryRuleRequiredFields'
         - $ref: '#/components/schemas/QueryRuleOptionalFields'
-          x-modify: requiredOptional
         - $ref: '#/components/schemas/QueryRuleDefaultableFields'
           x-modify: required
 
@@ -583,10 +573,10 @@ components:
         - $ref: '#/components/schemas/SavedQueryRuleDefaultableFields'
 
     SavedQueryRuleResponseFields:
+      x-modify: requiredOptional
       allOf:
         - $ref: '#/components/schemas/SavedQueryRuleRequiredFields'
         - $ref: '#/components/schemas/SavedQueryRuleOptionalFields'
-          x-modify: requiredOptional
         - $ref: '#/components/schemas/SavedQueryRuleDefaultableFields'
           x-modify: required
 
@@ -665,10 +655,10 @@ components:
         - $ref: '#/components/schemas/ThresholdRuleDefaultableFields'
 
     ThresholdRuleResponseFields:
+      x-modify: requiredOptional
       allOf:
         - $ref: '#/components/schemas/ThresholdRuleRequiredFields'
         - $ref: '#/components/schemas/ThresholdRuleOptionalFields'
-          x-modify: requiredOptional
         - $ref: '#/components/schemas/ThresholdRuleDefaultableFields'
           x-modify: required
 
@@ -796,10 +786,10 @@ components:
         - $ref: '#/components/schemas/ThreatMatchRuleDefaultableFields'
 
     ThreatMatchRuleResponseFields:
+      x-modify: requiredOptional
       allOf:
         - $ref: '#/components/schemas/ThreatMatchRuleRequiredFields'
         - $ref: '#/components/schemas/ThreatMatchRuleOptionalFields'
-          x-modify: requiredOptional
         - $ref: '#/components/schemas/ThreatMatchRuleDefaultableFields'
           x-modify: required
 
@@ -934,10 +924,10 @@ components:
         - $ref: '#/components/schemas/NewTermsRuleDefaultableFields'
 
     NewTermsRuleResponseFields:
+      x-modify: requiredOptional
       allOf:
         - $ref: '#/components/schemas/NewTermsRuleRequiredFields'
         - $ref: '#/components/schemas/NewTermsRuleOptionalFields'
-          x-modify: requiredOptional
         - $ref: '#/components/schemas/NewTermsRuleDefaultableFields'
           x-modify: required
 
@@ -1032,6 +1022,8 @@ components:
     ##########################
 
     TypeSpecificCreateProps:
+      discriminator:
+        propertyName: type
       anyOf:
         - $ref: '#/components/schemas/EqlRuleCreateFields'
         - $ref: '#/components/schemas/QueryRuleCreateFields'
@@ -1054,6 +1046,8 @@ components:
         - $ref: '#/components/schemas/EsqlRulePatchFields'
 
     TypeSpecificResponse:
+      discriminator:
+        propertyName: type
       anyOf:
         - $ref: '#/components/schemas/EqlRuleResponseFields'
         - $ref: '#/components/schemas/QueryRuleResponseFields'
@@ -1065,6 +1059,8 @@ components:
         - $ref: '#/components/schemas/EsqlRuleResponseFields'
 
     RuleCreateProps:
+      discriminator:
+        propertyName: type
       anyOf:
         - $ref: '#/components/schemas/EqlRuleCreateProps'
         - $ref: '#/components/schemas/QueryRuleCreateProps'
@@ -1076,6 +1072,8 @@ components:
         - $ref: '#/components/schemas/EsqlRuleCreateProps'
 
     RuleUpdateProps:
+      discriminator:
+        propertyName: type
       anyOf:
         - $ref: '#/components/schemas/EqlRuleUpdateProps'
         - $ref: '#/components/schemas/QueryRuleUpdateProps'
@@ -1098,6 +1096,8 @@ components:
         - $ref: '#/components/schemas/EsqlRulePatchProps'
 
     RuleResponse:
+      discriminator:
+        propertyName: type
       anyOf:
         - $ref: '#/components/schemas/EqlRule'
         - $ref: '#/components/schemas/QueryRule'

@@ -17,9 +17,21 @@
  */
 export type RequiredOptional<T> = { [K in keyof T]-?: [T[K]] } extends infer U
   ? U extends Record<keyof U, [unknown]>
-    ? { [K in keyof U]: U[K][0] }
+    ? {
+        [K in keyof U]: Record<string, unknown> extends U[K][0]
+          ? undefined extends U[K][0]
+            ? RequiredOptional<U[K][0]> | undefined
+            : RequiredOptional<U[K][0]>
+          : U[K][0];
+      }
     : never
   : never;
+
+export type Test2<T> = { [K in keyof T]-?: [T[K]] };
+
+type Test3 = Test2<{ a?: string }>;
+
+type Test = RequiredOptional<{ a?: { b?: string } | undefined; c: { d?: string } }>;
 
 /**
  * This helper designed to be used with `z.transform` to make all optional fields required.
