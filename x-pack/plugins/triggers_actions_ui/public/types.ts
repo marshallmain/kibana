@@ -564,11 +564,21 @@ export type AlertsTableProps = {
 } & Partial<Pick<EuiDataGridProps, 'gridStyle' | 'rowHeightsOptions'>>;
 
 // TODO We need to create generic type between our plugin, right now we have different one because of the old alerts table
-export type GetRenderCellValue = ({
+export type GetRenderCellValue<T = unknown> = ({
   setFlyoutAlert,
+  context,
 }: {
   setFlyoutAlert?: (data: unknown) => void;
+  context?: T;
 }) => (props: unknown) => React.ReactNode;
+
+export type PreFetchPageContext<T> = ({
+  alerts,
+  columns,
+}: {
+  alerts: Alerts;
+  columns: EuiDataGridColumn[];
+}) => T;
 
 export type AlertTableFlyoutComponent =
   | React.FunctionComponent<AlertsTableFlyoutBaseProps>
@@ -665,7 +675,7 @@ export interface UseFieldBrowserOptionsArgs {
 
 export type UseFieldBrowserOptions = (args: UseFieldBrowserOptionsArgs) => FieldBrowserOptions;
 
-export interface AlertsTableConfigurationRegistry {
+export interface AlertsTableConfigurationRegistry<T extends object = object> {
   id: string;
   cases?: {
     featureId: string;
@@ -679,7 +689,7 @@ export interface AlertsTableConfigurationRegistry {
     footer: AlertTableFlyoutComponent;
   };
   sort?: SortCombinations[];
-  getRenderCellValue?: GetRenderCellValue;
+  getRenderCellValue?: GetRenderCellValue<T>;
   useActionsColumn?: UseActionsColumnRegistry;
   useBulkActions?: UseBulkActionsRegistry;
   useCellActions?: UseCellActions;
@@ -688,6 +698,7 @@ export interface AlertsTableConfigurationRegistry {
   };
   useFieldBrowserOptions?: UseFieldBrowserOptions;
   showInspectButton?: boolean;
+  useFetchPageContext?: PreFetchPageContext<T>;
 }
 
 export interface AlertsTableConfigurationRegistryWithActions

@@ -23,6 +23,7 @@ import {
 import { getDataTablesInStorageByIds } from '../../../timelines/containers/local_storage';
 import { getColumns } from '../../../detections/configurations/security_solution_detections';
 import { getRenderCellValueHook } from '../../../detections/configurations/security_solution_detections/render_cell_value';
+import { useFetchPageContext } from '../../../detections/configurations/security_solution_detections/fetch_page_context';
 import { useToGetInternalFlyout } from '../../../timelines/components/side_panel/event_details/flyout';
 import { SourcererScopeName } from '../../store/sourcerer/model';
 
@@ -71,6 +72,7 @@ const registerAlertsTableConfiguration = (
     sort,
     useFieldBrowserOptions: getUseTriggersActionsFieldBrowserOptions(SourcererScopeName.detections),
     showInspectButton: true,
+    useFetchPageContext,
   });
 
   // register Alert Table on RuleDetails Page
@@ -87,6 +89,7 @@ const registerAlertsTableConfiguration = (
     sort,
     useFieldBrowserOptions: getUseTriggersActionsFieldBrowserOptions(SourcererScopeName.detections),
     showInspectButton: true,
+    useFetchPageContext,
   });
 
   registerIfNotAlready(registry, {
@@ -100,6 +103,7 @@ const registerAlertsTableConfiguration = (
     useCellActions: getUseCellActionsHook(TableId.alertsOnCasePage),
     sort,
     showInspectButton: true,
+    useFetchPageContext,
   });
 
   registerIfNotAlready(registry, {
@@ -114,13 +118,14 @@ const registerAlertsTableConfiguration = (
     usePersistentControls: getPersistentControlsHook(TableId.alertsRiskInputs),
     sort,
     showInspectButton: true,
+    useFetchPageContext,
   });
 };
 
-const registerIfNotAlready = (
+const registerIfNotAlready: <T extends object>(
   registry: AlertsTableConfigurationRegistryContract,
-  registryArgs: AlertsTableConfigurationRegistry
-) => {
+  registryArgs: AlertsTableConfigurationRegistry<T>
+) => void = (registry, registryArgs) => {
   if (!registry.has(registryArgs.id)) {
     registry.register(registryArgs);
   }
