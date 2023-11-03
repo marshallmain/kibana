@@ -5,10 +5,11 @@
  * 2.0.
  */
 
+import { useMemo } from 'react';
 import type { UserProfile } from '@kbn/security-plugin/common';
 import type { UserProfileAvatarData } from '@kbn/user-profile-components';
 import type { PreFetchPageContext } from '@kbn/triggers-actions-ui-plugin/public/types';
-import { useBulkGetUserProfiles } from '../../../common/hooks/use_bulk_get_user_profiles';
+import { useBulkGetUserProfiles } from '../../../common/hooks/user_profile/use_bulk_get_user_profiles';
 
 export interface RenderCellValueContext {
   profiles: Array<UserProfile<{ avatar: UserProfileAvatarData }>> | undefined;
@@ -32,5 +33,9 @@ export const useFetchPageContext: PreFetchPageContext<RenderCellValueContext> = 
     });
   });
   const result = useBulkGetUserProfiles({ uids });
-  return { profiles: result.data, isLoading: result.isLoading };
+  const returnVal = useMemo(
+    () => ({ profiles: result.data, isLoading: result.isLoading }),
+    [result.data, result.isLoading]
+  );
+  return returnVal;
 };
