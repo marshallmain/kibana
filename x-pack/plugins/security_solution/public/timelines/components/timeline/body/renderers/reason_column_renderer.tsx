@@ -11,7 +11,7 @@ import React, { useMemo } from 'react';
 
 import type { EcsSecurityExtension as Ecs } from '@kbn/securitysolution-ecs';
 import { TableId } from '@kbn/securitysolution-data-table';
-import type { ColumnHeaderOptions, RowRenderer } from '../../../../../../common/types';
+import type { RowRenderer } from '../../../../../../common/types';
 import type { ColumnRenderer } from './column_renderer';
 import { REASON_FIELD_NAME } from './constants';
 import { getRowRenderer } from './get_row_renderer';
@@ -20,7 +20,7 @@ import { plainColumnRenderer } from './plain_column_renderer';
 export const reasonColumnRenderer: ColumnRenderer = {
   isInstance: isEqual(REASON_FIELD_NAME),
 
-  renderColumn: ({
+  RenderColumn: ({
     columnName,
     ecsData,
     eventId,
@@ -32,31 +32,24 @@ export const reasonColumnRenderer: ColumnRenderer = {
     scopeId,
     truncate,
     values,
-  }: {
-    columnName: string;
-    ecsData?: Ecs;
-    eventId: string;
-    field: ColumnHeaderOptions;
-    isDetails?: boolean;
-    isDraggable?: boolean;
-    linkValues?: string[] | null | undefined;
-    rowRenderers?: RowRenderer[];
-    scopeId: string;
-    truncate?: boolean;
-    values: string[] | undefined | null;
+    alerts,
   }) => {
     if (isDetails && values && ecsData && rowRenderers) {
-      return values.map((value, i) => (
-        <ReasonCell
-          ecsData={ecsData}
-          key={`reason-column-renderer-value-${scopeId}-${columnName}-${eventId}-${field.id}-${value}-${i}`}
-          rowRenderers={rowRenderers}
-          scopeId={scopeId}
-          value={value}
-        />
-      ));
+      return (
+        <>
+          {values.map((value, i) => (
+            <ReasonCell
+              ecsData={ecsData}
+              key={`reason-column-renderer-value-${scopeId}-${columnName}-${eventId}-${field.id}-${value}-${i}`}
+              rowRenderers={rowRenderers}
+              scopeId={scopeId}
+              value={value}
+            />
+          ))}
+        </>
+      );
     } else {
-      return plainColumnRenderer.renderColumn({
+      return plainColumnRenderer.RenderColumn({
         columnName,
         eventId,
         field,
@@ -66,6 +59,7 @@ export const reasonColumnRenderer: ColumnRenderer = {
         scopeId,
         truncate,
         values,
+        alerts,
       });
     }
   },

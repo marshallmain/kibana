@@ -7,7 +7,6 @@
 
 import { head } from 'lodash/fp';
 import React from 'react';
-import type { Filter } from '@kbn/es-query';
 
 import type { ColumnHeaderOptions } from '../../../../../../common/types';
 import type { TimelineNonEcsData } from '../../../../../../common/search_strategy/timeline';
@@ -21,7 +20,7 @@ export const dataExistsAtColumn = (columnName: string, data: TimelineNonEcsData[
 export const plainColumnRenderer: ColumnRenderer = {
   isInstance: (columnName: string, data: TimelineNonEcsData[]) =>
     dataExistsAtColumn(columnName, data),
-  renderColumn: ({
+  RenderColumn: ({
     asPlainText,
     columnName,
     eventId,
@@ -36,7 +35,6 @@ export const plainColumnRenderer: ColumnRenderer = {
     columnName: string;
     eventId: string;
     field: ColumnHeaderOptions;
-    globalFilters?: Filter[];
     isDraggable?: boolean;
     scopeId: string;
     truncate?: boolean;
@@ -49,22 +47,26 @@ export const plainColumnRenderer: ColumnRenderer = {
     // Draggable columns should render individual fields to give the user
     // fine-grained control over the individual values
     if (isDraggable) {
-      return values.map((value, i) => (
-        <FormattedFieldValue
-          asPlainText={asPlainText}
-          contextId={`plain-column-renderer-formatted-field-value-${scopeId}`}
-          eventId={eventId}
-          fieldFormat={field.format ?? ''}
-          fieldName={columnName}
-          isAggregatable={field.aggregatable ?? false}
-          fieldType={field.type ?? ''}
-          isDraggable={isDraggable}
-          key={`plain-column-renderer-formatted-field-value-${scopeId}-${columnName}-${eventId}-${field.id}-${value}-${i}`}
-          linkValue={head(linkValues)}
-          truncate={truncate}
-          value={value}
-        />
-      ));
+      return (
+        <>
+          {values.map((value, i) => (
+            <FormattedFieldValue
+              asPlainText={asPlainText}
+              contextId={`plain-column-renderer-formatted-field-value-${scopeId}`}
+              eventId={eventId}
+              fieldFormat={field.format ?? ''}
+              fieldName={columnName}
+              isAggregatable={field.aggregatable ?? false}
+              fieldType={field.type ?? ''}
+              isDraggable={isDraggable}
+              key={`plain-column-renderer-formatted-field-value-${scopeId}-${columnName}-${eventId}-${field.id}-${value}-${i}`}
+              linkValue={head(linkValues)}
+              truncate={truncate}
+              value={value}
+            />
+          ))}
+        </>
+      );
     } else {
       // In case the column isn't draggable, fields are joined
       // to give users a faster overview of all values.

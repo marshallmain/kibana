@@ -7,30 +7,15 @@
 
 import type React from 'react';
 import type { Filter } from '@kbn/es-query';
+import type { Alerts } from '@kbn/triggers-actions-ui-plugin/public/types';
 
 import type { EcsSecurityExtension as Ecs } from '@kbn/securitysolution-ecs';
 import type { ColumnHeaderOptions, RowRenderer } from '../../../../../../common/types';
 import type { TimelineNonEcsData } from '../../../../../../common/search_strategy/timeline';
-import type { RenderCellValueContext } from '../../../../../detections/configurations/security_solution_detections/fetch_page_context';
 
 export interface ColumnRenderer {
   isInstance: (columnName: string, data: TimelineNonEcsData[]) => boolean;
-  renderColumn: ({
-    className,
-    columnName,
-    eventId,
-    field,
-    globalFilters,
-    isDetails,
-    isDraggable,
-    linkValues,
-    rowRenderers,
-    scopeId,
-    truncate,
-    values,
-    key,
-    context,
-  }: {
+  RenderColumn: React.FC<{
     asPlainText?: boolean;
     className?: string;
     columnName: string;
@@ -46,6 +31,6 @@ export interface ColumnRenderer {
     truncate?: boolean;
     values: string[] | null | undefined;
     key?: string;
-    context?: RenderCellValueContext;
-  }) => React.ReactNode;
+    alerts?: Alerts;
+  }>;
 }

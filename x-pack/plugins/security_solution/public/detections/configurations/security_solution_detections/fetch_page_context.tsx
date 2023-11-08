@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import type { UserProfileWithAvatar } from '@kbn/user-profile-components';
-import type { PreFetchPageContext } from '@kbn/triggers-actions-ui-plugin/public/types';
+import type { Alerts } from '@kbn/triggers-actions-ui-plugin/public/types';
 import { useBulkGetUserProfiles } from '../../../common/components/user_profiles/use_bulk_get_user_profiles';
 
 export interface RenderCellValueContext {
@@ -15,24 +15,17 @@ export interface RenderCellValueContext {
   isLoading: boolean;
 }
 
-// Add new columns names to this array to render the user's display name instead of profile_uid
-export const profileUidColumns = [
-  'kibana.alert.workflow_assignee_ids',
-  'kibana.alert.workflow_user',
-];
-
-export const useFetchPageContext: PreFetchPageContext<RenderCellValueContext> = ({
+export const useFetchSingleColumnProfiles = ({
   alerts,
-  columns,
-}) => {
+  columnId,
+}: {
+  alerts?: Alerts;
+  columnId: string;
+}): RenderCellValueContext => {
   const uids = new Set<string>();
-  alerts.forEach((alert) => {
-    profileUidColumns.forEach((columnId) => {
-      if (columns.find((column) => column.id === columnId) != null) {
-        const userUids = alert[columnId];
-        userUids?.forEach((uid) => uids.add(uid as string));
-      }
-    });
+  alerts?.forEach((alert) => {
+    const userUids = alert[columnId];
+    userUids?.forEach((uid) => uids.add(uid as string));
   });
   const result = useBulkGetUserProfiles({ uids });
   const returnVal = useMemo(

@@ -11,7 +11,7 @@ import React, { useMemo } from 'react';
 
 import styled from 'styled-components';
 import type { EcsSecurityExtension as Ecs } from '@kbn/securitysolution-ecs';
-import type { ColumnHeaderOptions, RowRenderer } from '../../../../../../common/types';
+import type { RowRenderer } from '../../../../../../common/types';
 import type { ColumnRenderer } from './column_renderer';
 import { EVENT_SUMMARY_FIELD_NAME } from './constants';
 import { getRowRenderer } from './get_row_renderer';
@@ -28,7 +28,7 @@ const EventRenderedFlexItem = styled(EuiFlexItem)`
 export const eventSummaryColumnRenderer: ColumnRenderer = {
   isInstance: isEqual(EVENT_SUMMARY_FIELD_NAME),
 
-  renderColumn: ({
+  RenderColumn: ({
     ecsData,
     columnName,
     eventId,
@@ -39,18 +39,7 @@ export const eventSummaryColumnRenderer: ColumnRenderer = {
     scopeId,
     truncate,
     values,
-  }: {
-    columnName: string;
-    ecsData?: Ecs;
-    eventId: string;
-    field: ColumnHeaderOptions;
-    isDetails?: boolean;
-    isDraggable?: boolean;
-    linkValues?: string[] | null | undefined;
-    rowRenderers?: RowRenderer[];
-    scopeId: string;
-    truncate?: boolean;
-    values: string[] | undefined | null;
+    alerts,
   }) => {
     if (ecsData && rowRenderers) {
       return (
@@ -63,7 +52,7 @@ export const eventSummaryColumnRenderer: ColumnRenderer = {
         />
       );
     } else {
-      return plainColumnRenderer.renderColumn({
+      return plainColumnRenderer.RenderColumn({
         columnName,
         eventId,
         field,
@@ -73,6 +62,7 @@ export const eventSummaryColumnRenderer: ColumnRenderer = {
         scopeId,
         truncate,
         values,
+        alerts,
       });
     }
   },

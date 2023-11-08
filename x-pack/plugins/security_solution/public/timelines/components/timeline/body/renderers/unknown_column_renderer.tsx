@@ -10,5 +10,5 @@ import type { ColumnRenderer } from './column_renderer';
 
 export const unknownColumnRenderer: ColumnRenderer = {
   isInstance: () => true,
-  renderColumn: () => getEmptyTagValue(),
+  RenderColumn: () => getEmptyTagValue(),
 };

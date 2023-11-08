@@ -6,7 +6,6 @@
  */
 
 import React from 'react';
-import type { ColumnHeaderOptions } from '../../../../../../common/types';
 import type { TimelineNonEcsData } from '../../../../../../common/search_strategy/timeline';
 import {
   DraggableWrapper,
@@ -25,21 +24,7 @@ export const dataNotExistsAtColumn = (columnName: string, data: TimelineNonEcsDa
 export const emptyColumnRenderer: ColumnRenderer = {
   isInstance: (columnName: string, data: TimelineNonEcsData[]) =>
     dataNotExistsAtColumn(columnName, data),
-  renderColumn: ({
-    columnName,
-    eventId,
-    field,
-    isDraggable = true,
-    scopeId,
-    truncate,
-  }: {
-    columnName: string;
-    eventId: string;
-    field: ColumnHeaderOptions;
-    isDraggable?: boolean;
-    scopeId: string;
-    truncate?: boolean;
-  }) =>
+  RenderColumn: ({ columnName, eventId, field, isDraggable = true, scopeId, truncate }) =>
     isDraggable ? (
       <DraggableWrapper
         dataProvider={{

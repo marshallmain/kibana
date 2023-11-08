@@ -7,45 +7,19 @@
 
 import { EuiLoadingSpinner } from '@elastic/eui';
 import React from 'react';
-
-import type { EcsSecurityExtension as Ecs } from '@kbn/securitysolution-ecs';
 import { UsersAvatarsPanel } from '../../../../../common/components/user_profiles/users_avatars_panel';
-import type { ColumnHeaderOptions, RowRenderer } from '../../../../../../common/types';
 import type { ColumnRenderer } from './column_renderer';
-import { profileUidColumns } from '../../../../../detections/configurations/security_solution_detections/fetch_page_context';
-import type { RenderCellValueContext } from '../../../../../detections/configurations/security_solution_detections/fetch_page_context';
+import { useFetchSingleColumnProfiles } from '../../../../../detections/configurations/security_solution_detections/fetch_page_context';
+
+// Add new columns names to this array to render the user's display name instead of profile_uid
+const profileUidColumns = ['kibana.alert.workflow_assignee_ids', 'kibana.alert.workflow_user'];
 
 export const userProfileColumnRenderer: ColumnRenderer = {
   isInstance: (columnName) => profileUidColumns.includes(columnName),
-  renderColumn: ({
-    columnName,
-    ecsData,
-    eventId,
-    field,
-    isDetails,
-    isDraggable = true,
-    linkValues,
-    rowRenderers = [],
-    scopeId,
-    truncate,
-    values,
-    context,
-  }: {
-    columnName: string;
-    ecsData?: Ecs;
-    eventId: string;
-    field: ColumnHeaderOptions;
-    isDetails?: boolean;
-    isDraggable?: boolean;
-    linkValues?: string[] | null | undefined;
-    rowRenderers?: RowRenderer[];
-    scopeId: string;
-    truncate?: boolean;
-    values: string[] | undefined | null;
-    context?: RenderCellValueContext;
-  }) => {
+  RenderColumn: ({ values, alerts, columnName }) => {
     // Show spinner if loading profiles or if there are no fetched profiles yet
     // Do not show the loading spinner if context is not provided at all
+    const context = useFetchSingleColumnProfiles({ alerts, columnId: columnName });
     if (context?.isLoading) {
       return <EuiLoadingSpinner size="s" />;
     }

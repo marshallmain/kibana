@@ -17,7 +17,7 @@ import {
 } from '@elastic/eui';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSorting, usePagination, useBulkActions, useActionsColumn } from './hooks';
-import { AlertsTableProps, FetchAlertData } from '../../../types';
+import { Alerts, AlertsTableProps, FetchAlertData } from '../../../types';
 import { ALERTS_TABLE_CONTROL_COLUMNS_ACTIONS_LABEL } from './translations';
 
 import './alerts_table.scss';
@@ -47,6 +47,7 @@ const basicRenderCellValue = ({
   data: Array<{ field: string; value: string[] }>;
   ecsData?: FetchAlertData['ecsAlertsData'][number];
   columnId: string;
+  alerts: Alerts;
 }) => {
   const value = data.find((d) => d.field === columnId)?.value ?? [];
   if (Array.isArray(value)) {
@@ -89,11 +90,6 @@ const AlertsTable: React.FunctionComponent<AlertsTableProps> = (props: AlertsTab
     useActionsColumn({
       options: props.alertsTableConfiguration.useActionsColumn,
     });
-
-  const renderCellContext = props.alertsTableConfiguration.useFetchPageContext?.({
-    alerts,
-    columns: props.columns,
-  });
 
   const {
     isBulkActionsColumnActive,
@@ -323,10 +319,9 @@ const AlertsTable: React.FunctionComponent<AlertsTableProps> = (props: AlertsTab
       props.alertsTableConfiguration?.getRenderCellValue
         ? props.alertsTableConfiguration?.getRenderCellValue({
             setFlyoutAlert: handleFlyoutAlert,
-            context: renderCellContext,
           })
         : basicRenderCellValue,
-    [handleFlyoutAlert, props.alertsTableConfiguration, renderCellContext]
+    [handleFlyoutAlert, props.alertsTableConfiguration]
   )();
 
   const handleRenderCellValue = useCallback(
@@ -359,6 +354,7 @@ const AlertsTable: React.FunctionComponent<AlertsTableProps> = (props: AlertsTab
           ..._props,
           data,
           ecsData: ecsAlert,
+          alerts,
         });
       } else if (isLoading) {
         return <EuiSkeletonText lines={1} />;
