@@ -6,6 +6,7 @@
  * Side Public License, v 1.
  */
 
+import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 import type { RequestHandlerContext } from '@kbn/core-http-request-handler-context-server';
 import type {
   Version,
@@ -84,6 +85,7 @@ export interface ContentTypeDefinition<S extends ContentStorage = ContentStorage
   version: {
     latest: Version;
   };
+  rbac?: RbacConfig;
 }
 
 /**
@@ -110,4 +112,10 @@ export interface MSearchConfig<T = unknown, TSavedObjectAttributes = unknown> {
    * By default, only `title` and `description` are searched.
    */
   additionalSearchFields?: string[];
+}
+
+export interface RbacConfig {
+  mainPrivilege: string;
+  additionalPrivileges: string[];
+  privilegeGenerator?: (privileges: Map<string, boolean>) => QueryDslQueryContainer;
 }

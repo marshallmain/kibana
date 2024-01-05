@@ -77,6 +77,12 @@ export class Core {
           object: [event.contentTypeId, (event as any).contentId],
         });
       });
+
+      this.eventBus.on('updateItemSuccess', 'security_alert', (event) => {
+        eventStream.addEvent({
+          predicate: ['update', event.options],
+        });
+      });
     }
   }
 }

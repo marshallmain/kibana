@@ -6,13 +6,15 @@
  * Side Public License, v 1.
  */
 
+import type { SecurityPluginStart } from '@kbn/security-plugin/server';
 import { CoreApi } from './core';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ContentManagementServerSetupDependencies {}
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ContentManagementServerStartDependencies {}
+export interface ContentManagementServerStartDependencies {
+  security: SecurityPluginStart;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ContentManagementServerSetup extends CoreApi {}

@@ -8,6 +8,7 @@
 
 import type { CoreSetup } from '@kbn/core/server';
 import type { Optional } from 'utility-types';
+import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 
 /**
  * Represents a factory which can be used to create an Event Stream client.
@@ -52,6 +53,8 @@ export interface EventStreamClient {
    * options.
    */
   filter: (options: EventStreamClientFilterOptions) => Promise<EventStreamClientFilterResult>;
+
+  query: (options: EventStreamClientQueryOptions) => Promise<EventStreamClientQueryResult>;
 }
 
 /**
@@ -123,6 +126,14 @@ export interface EventStreamClientFilterResult {
    * The list of events which matched the filter. Sorted by time in descending
    * order.
    */
+  readonly events: EventStreamEvent[];
+}
+
+export interface EventStreamClientQueryOptions {
+  readonly query: QueryDslQueryContainer;
+}
+
+export interface EventStreamClientQueryResult {
   readonly events: EventStreamEvent[];
 }
 

@@ -13,6 +13,8 @@ import type {
   EventStreamClient,
   EventStreamClientFilterOptions,
   EventStreamClientFilterResult,
+  EventStreamClientQueryOptions,
+  EventStreamClientQueryResult,
   EventStreamEvent,
   EventStreamLogger,
 } from '../types';
@@ -185,5 +187,19 @@ export class EsEventStreamClient implements EventStreamClient {
       cursor,
       events,
     };
+  }
+
+  public async query(
+    options: EventStreamClientQueryOptions
+  ): Promise<EventStreamClientQueryResult> {
+    const esClient = await this.deps.esClient;
+    const request: estypes.SearchRequest = {
+      index: this.#names.dataStream,
+      query: options.query,
+      sort,
+    };
+    const res = await esClient.search<EsEventStreamEventDto>(request);
+    const events = res.hits.hits.map((hit) => dtoToEvent(hit._source!));
+    return { events };
   }
 }

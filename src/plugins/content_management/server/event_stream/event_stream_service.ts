@@ -13,6 +13,8 @@ import type {
   EventStreamClientFactory,
   EventStreamClientFilterOptions,
   EventStreamClientFilterResult,
+  EventStreamClientQueryOptions,
+  EventStreamClientQueryResult,
   EventStreamEvent,
   EventStreamEventPartial,
   EventStreamLogger,
@@ -164,5 +166,13 @@ export class EventStreamService {
     const client = this.#getClient();
 
     return await client.filter(options);
+  }
+
+  public async query(
+    options: EventStreamClientQueryOptions
+  ): Promise<EventStreamClientQueryResult> {
+    const client = this.#getClient();
+
+    return client.query(options);
   }
 }

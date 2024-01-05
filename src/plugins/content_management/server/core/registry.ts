@@ -69,4 +69,9 @@ export class ContentRegistry {
   isContentRegistered(id: string): boolean {
     return this.types.has(id);
   }
+
+  /** Get all content types so we can iterate over them */
+  getTypes(): Map<string, ContentType> {
+    return this.types;
+  }
 }
