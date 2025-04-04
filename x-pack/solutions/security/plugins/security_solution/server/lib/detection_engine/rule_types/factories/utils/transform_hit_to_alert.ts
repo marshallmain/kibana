@@ -107,9 +107,10 @@ export const transformHitToAlert = ({
       intendedTimestamp,
     });
 
-    const { result: validatedSource, removed: removedSourceFields } = traverseAndMutateDoc(
+    /*const { result: validatedSource, removed: removedSourceFields } = traverseAndMutateDoc(
       mergedDoc._source
-    );
+    );*/
+    const validatedSource = mergedDoc._source;
 
     // The `alertFields` we add to alerts contain `event.kind: 'signal'` in dot notation. To avoid duplicating `event.kind`,
     // we remove any existing `event.kind` field here before we merge `alertFields` into `validatedSource` later on
@@ -117,12 +118,12 @@ export const transformHitToAlert = ({
       robustSet({ key: EVENT_KIND, document: validatedSource, valueToSet: undefined });
     }
 
-    if (removedSourceFields.length) {
+    /*if (removedSourceFields.length) {
       ruleExecutionLogger?.debug(
         'Following fields were removed from alert source as ECS non-compliant:',
         JSON.stringify(removedSourceFields)
       );
-    }
+    }*/
 
     merge(validatedSource, alertFields);
     if (thresholdResult != null && isThresholdResult(thresholdResult)) {

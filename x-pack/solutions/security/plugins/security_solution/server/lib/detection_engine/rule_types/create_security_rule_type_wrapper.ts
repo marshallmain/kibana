@@ -116,7 +116,7 @@ export const createSecurityRuleTypeWrapper: CreateSecurityRuleTypeWrapper =
     const persistenceRuleType = createPersistenceRuleTypeWrapper({
       ruleDataClient,
       logger,
-      formatAlert: formatAlertForNotificationActions,
+      // formatAlert: formatAlertForNotificationActions,
     });
 
     return persistenceRuleType({
@@ -603,7 +603,7 @@ export const createSecurityRuleTypeWrapper: CreateSecurityRuleTypeWrapper =
         useLegacyAlerts: true,
         isSpaceAware: true,
         secondaryAlias: config.signalsIndex,
-        formatAlert: formatAlertForNotificationActions as unknown as FormatAlert<never>,
+        //formatAlert: formatAlertForNotificationActions as unknown as FormatAlert<never>,
       },
     });
   };
