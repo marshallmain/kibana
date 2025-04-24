@@ -167,6 +167,9 @@ export const createDetectionRulesClient = ({
           ...args,
           detectionRulesClient: this,
           savedObjectsClient,
+          rulesClient,
+          mlAuthz,
+          actionsClient,
         });
       });
     },

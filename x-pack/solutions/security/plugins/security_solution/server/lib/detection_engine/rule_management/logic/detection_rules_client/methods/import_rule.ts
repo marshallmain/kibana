@@ -17,7 +17,6 @@ import type { ImportRuleArgs } from '../detection_rules_client_interface';
 import { applyRuleUpdate } from '../mergers/apply_rule_update';
 import { validateMlAuth, toggleRuleEnabledOnUpdate } from '../utils';
 import { createRule } from './create_rule';
-import { getRuleByRuleId } from './get_rule_by_rule_id';
 import { createRuleImportErrorObject } from '../../import/errors';
 
 interface ImportRuleOptions {
@@ -35,17 +34,19 @@ export const importRule = async ({
   prebuiltRuleAssetClient,
   mlAuthz,
 }: ImportRuleOptions): Promise<RuleResponse> => {
-  const { ruleToImport, overwriteRules, overrideFields, allowMissingConnectorSecrets } =
-    importRulePayload;
+  const {
+    ruleToImport,
+    overwriteRules,
+    overrideFields,
+    allowMissingConnectorSecrets,
+    existingRules,
+  } = importRulePayload;
   // For backwards compatibility, immutable is false by default
   const rule = { ...ruleToImport, immutable: false, ...overrideFields };
 
   await validateMlAuth(mlAuthz, ruleToImport.type);
 
-  const existingRule = await getRuleByRuleId({
-    rulesClient,
-    ruleId: rule.rule_id,
-  });
+  const existingRule: RuleResponse | null = existingRules[rule.rule_id];
 
   if (existingRule && !overwriteRules) {
     throw createRuleImportErrorObject({

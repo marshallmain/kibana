@@ -18,6 +18,11 @@ interface GetRuleByRuleIdOptions {
   ruleId: RuleSignatureId;
 }
 
+interface GetRulesByRuleIdsOptions {
+  rulesClient: RulesClient;
+  ruleIds: RuleSignatureId[];
+}
+
 export const getRuleByRuleId = async ({
   rulesClient,
   ruleId,
@@ -35,4 +40,26 @@ export const getRuleByRuleId = async ({
     return null;
   }
   return convertAlertingRuleToRuleResponse(findRuleResponse.data[0]);
+};
+
+export const getRulesByRuleIds = async ({
+  rulesClient,
+  ruleIds,
+}: GetRulesByRuleIdsOptions): Promise<Record<string, RuleResponse>> => {
+  const findRuleResponse = await findRules({
+    rulesClient,
+    filter: `alert.attributes.params.ruleId: (${ruleIds
+      .map((ruleId) => `"${ruleId}"`)
+      .join(' OR ')})`,
+    page: 1,
+    fields: undefined,
+    perPage: 1000,
+    sortField: undefined,
+    sortOrder: undefined,
+  });
+
+  return findRuleResponse.data.reduce<Record<string, RuleResponse>>((acc, rule) => {
+    acc[rule.params.ruleId] = convertAlertingRuleToRuleResponse(rule);
+    return acc;
+  }, {});
 };

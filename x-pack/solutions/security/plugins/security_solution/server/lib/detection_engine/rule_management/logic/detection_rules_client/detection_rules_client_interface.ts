@@ -60,6 +60,7 @@ export interface ImportRuleArgs {
   overrideFields?: { rule_source: RuleSource; immutable: boolean };
   overwriteRules?: boolean;
   allowMissingConnectorSecrets?: boolean;
+  existingRules: Record<string, RuleResponse>;
 }
 
 export interface ImportRulesArgs {

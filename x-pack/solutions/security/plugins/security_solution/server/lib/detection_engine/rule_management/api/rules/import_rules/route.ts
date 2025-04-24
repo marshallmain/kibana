@@ -40,7 +40,7 @@ import {
 import { RULE_MANAGEMENT_IMPORT_EXPORT_SOCKET_TIMEOUT_MS } from '../../timeouts';
 import { createPrebuiltRuleObjectsClient } from '../../../../prebuilt_rules/logic/rule_objects/prebuilt_rule_objects_client';
 
-const CHUNK_PARSED_OBJECT_SIZE = 50;
+const CHUNK_PARSED_OBJECT_SIZE = 200;
 
 export const importRulesRoute = (router: SecuritySolutionPluginRouter, config: ConfigType) => {
   router.versioned

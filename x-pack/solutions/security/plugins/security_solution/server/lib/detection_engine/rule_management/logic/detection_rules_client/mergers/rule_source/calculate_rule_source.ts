@@ -19,6 +19,12 @@ interface CalculateRuleSourceProps {
   currentRule: RuleResponse | undefined;
 }
 
+interface CalculateRuleSourceSyncProps {
+  prebuiltRuleAssets: Record<string, Record<number, PrebuiltRuleAsset>>;
+  nextRule: RuleResponse;
+  currentRule: RuleResponse | undefined;
+}
+
 export async function calculateRuleSource({
   prebuiltRuleAssetClient,
   nextRule,
@@ -47,6 +53,31 @@ export async function calculateRuleSource({
     };
   }
 
+  return {
+    type: 'internal',
+  };
+}
+
+export function calculateRuleSourceSync({
+  prebuiltRuleAssets,
+  nextRule,
+  currentRule,
+}: CalculateRuleSourceSyncProps): RuleSource {
+  if (nextRule.immutable) {
+    const baseRule: PrebuiltRuleAsset | undefined =
+      prebuiltRuleAssets[nextRule.rule_id][nextRule.version];
+
+    const isCustomized = calculateIsCustomized({
+      baseRule,
+      nextRule,
+      currentRule,
+    });
+
+    return {
+      type: 'external',
+      is_customized: isCustomized,
+    };
+  }
   return {
     type: 'internal',
   };
