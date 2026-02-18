@@ -11,6 +11,7 @@ import type { SavedObjectsClientContract } from '@kbn/core/server';
 
 import { ProductFeatureKey } from '@kbn/security-solution-features/keys';
 import type { ILicense } from '@kbn/licensing-types';
+import { ruleTypeMappings } from '@kbn/securitysolution-rules';
 import type { RuleResponse } from '../../../../../../common/api/detection_engine/model/rule_schema';
 import { withSecuritySpan } from '../../../../../utils/with_security_span';
 import type { MlAuthz } from '../../../../machine_learning/authz';
@@ -18,6 +19,7 @@ import type { ProductFeaturesService } from '../../../../product_features_servic
 import { createPrebuiltRuleAssetsClient } from '../../../prebuilt_rules/logic/rule_assets/prebuilt_rule_assets_client';
 import type { RuleImportErrorObject } from '../import/errors';
 import type {
+  BulkCreatePrebuiltRulesArgs,
   CreateCustomRuleArgs,
   CreatePrebuiltRuleArgs,
   DeleteRuleArgs,
@@ -37,7 +39,12 @@ import { patchRule } from './methods/patch_rule';
 import { updateRule } from './methods/update_rule';
 import { upgradePrebuiltRule } from './methods/upgrade_prebuilt_rule';
 import { revertPrebuiltRule } from './methods/revert_prebuilt_rule';
-import { MINIMUM_RULE_CUSTOMIZATION_LICENSE } from '../../../../../../common/constants';
+import {
+  MINIMUM_RULE_CUSTOMIZATION_LICENSE,
+  SERVER_APP_ID,
+} from '../../../../../../common/constants';
+import { convertRuleResponseToAlertingRule } from './converters/convert_rule_response_to_alerting_rule';
+import { applyRuleDefaults } from './mergers/apply_rule_defaults';
 
 interface DetectionRulesClientParams {
   actionsClient: ActionsClient;
@@ -105,6 +112,23 @@ export const createDetectionRulesClient = ({
             immutable: true,
           },
           mlAuthz,
+        });
+      });
+    },
+
+    async bulkCreatePrebuiltRules(args: BulkCreatePrebuiltRulesArgs): Promise<void> {
+      return withSecuritySpan('DetectionRulesClient.bulkCreatePrebuiltRules', async () => {
+        await rulesClient.bulkCreate({
+          data: args.params.map((rule) => {
+            const ruleWithDefaults = applyRuleDefaults({ ...rule, immutable: true });
+
+            return {
+              ...convertRuleResponseToAlertingRule(ruleWithDefaults, actionsClient),
+              alertTypeId: ruleTypeMappings[rule.type],
+              consumer: SERVER_APP_ID,
+              enabled: rule.enabled ?? false,
+            };
+          }),
         });
       });
     },

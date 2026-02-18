@@ -23,6 +23,7 @@ export interface IDetectionRulesClient {
   getRuleCustomizationStatus: () => PrebuiltRulesCustomizationStatus;
   createCustomRule: (args: CreateCustomRuleArgs) => Promise<RuleResponse>;
   createPrebuiltRule: (args: CreatePrebuiltRuleArgs) => Promise<RuleResponse>;
+  bulkCreatePrebuiltRules: (args: BulkCreatePrebuiltRulesArgs) => Promise<void>;
   updateRule: (args: UpdateRuleArgs) => Promise<RuleResponse>;
   patchRule: (args: PatchRuleArgs) => Promise<RuleResponse>;
   deleteRule: (args: DeleteRuleArgs) => Promise<void>;
@@ -38,6 +39,10 @@ export interface CreateCustomRuleArgs {
 
 export interface CreatePrebuiltRuleArgs {
   params: RuleCreateProps;
+}
+
+export interface BulkCreatePrebuiltRulesArgs {
+  params: RuleCreateProps[];
 }
 
 export interface UpdateRuleArgs {

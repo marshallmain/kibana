@@ -21,5 +21,8 @@ export { createNewAPIKeySet } from './create_new_api_key_set';
 export { untrackRuleAlerts } from './untrack_rule_alerts';
 export { bulkMigrateLegacyActions } from './siem_legacy_actions/migrate_legacy_actions';
 export { formatLegacyActions } from './siem_legacy_actions/format_legacy_actions';
-export { addGeneratedActionValues } from './add_generated_action_values';
+export {
+  addGeneratedActionValues,
+  bulkAddGeneratedActionValues,
+} from './add_generated_action_values';
 export { incrementRevision } from './increment_revision';

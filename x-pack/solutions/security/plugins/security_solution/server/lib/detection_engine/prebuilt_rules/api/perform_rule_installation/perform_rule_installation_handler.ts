@@ -99,7 +99,7 @@ export const performRuleInstallationHandler = async (
       ruleInstallQueue.push(...(await excludeLicenseRestrictedRules(allInstallableRules, mlAuthz)));
     }
 
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = 500;
     while (ruleInstallQueue.length > 0) {
       const rulesToInstall = ruleInstallQueue.splice(0, BATCH_SIZE);
       const ruleAssets = await ruleAssetsClient.fetchAssetsByVersion(rulesToInstall);
@@ -133,7 +133,7 @@ export const performRuleInstallationHandler = async (
         failed: ruleErrors.length,
       },
       results: {
-        created: installedRules.map(({ result }) => result),
+        created: installedRules,
         skipped: skippedRules,
       },
       errors: allErrors,

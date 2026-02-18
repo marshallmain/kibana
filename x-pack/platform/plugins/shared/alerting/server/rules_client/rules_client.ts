@@ -16,6 +16,8 @@ import type { CloneRuleParams } from '../application/rule/methods/clone';
 import { cloneRule } from '../application/rule/methods/clone';
 import type { CreateRuleParams } from '../application/rule/methods/create';
 import { createRule } from '../application/rule/methods/create';
+import type { BulkCreateRulesParams } from '../application/rule/methods/bulk_create';
+import { bulkCreateRules } from '../application/rule/methods/bulk_create';
 import type { UpdateRuleParams } from '../application/rule/methods/update';
 import { updateRule } from '../application/rule/methods/update';
 import type { SnoozeRuleOptions } from '../application/rule/methods/snooze';
@@ -171,6 +173,9 @@ export class RulesClient {
     cloneRule<Params>(this.context, params);
   public create = <Params extends RuleTypeParams = never>(params: CreateRuleParams<Params>) =>
     createRule<Params>(this.context, params);
+  public bulkCreate = <Params extends RuleTypeParams = never>(
+    params: BulkCreateRulesParams<Params>
+  ) => bulkCreateRules<Params>(this.context, params);
   public delete = (params: DeleteRuleParams) => deleteRule(this.context, params);
   public find = <Params extends RuleTypeParams = never>(params?: FindRulesParams) =>
     findRules<Params>(this.context, params);
