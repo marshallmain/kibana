@@ -128,21 +128,31 @@ export async function bulkCreateRules<Params extends RuleParams = never>(
 
   // TODO: make sure throwing from asyncForEach works right
   // also switch to validating each alertTypeId-consumer pair
-  await asyncForEach(scheduleValidProcessedData, async (ruleData) => {
+
+  const ruleTypeIdConsumersMap = new Map<string, string[]>();
+  scheduleValidProcessedData.forEach((ruleData) => {
+    const consumers = ruleTypeIdConsumersMap.get(ruleData.alertTypeId) ?? [];
+    if (!consumers.includes(ruleData.consumer)) {
+      consumers.push(ruleData.consumer);
+    }
+  });
+  await withSpan({ name: 'authorization.ensureAuthorized', type: 'rules' }, async () => {
     try {
-      await withSpan({ name: 'authorization.ensureAuthorized', type: 'rules' }, async () =>
-        context.authorization.ensureAuthorized({
-          ruleTypeId: ruleData.alertTypeId,
-          consumer: ruleData.consumer,
-          operation: WriteOperations.Create,
-          entity: AlertingAuthorizationEntity.Rule,
+      const ruleTypeIdConsumersPairs = Array.from(ruleTypeIdConsumersMap.entries()).map(
+        ([ruleTypeId, consumers]) => ({
+          ruleTypeId,
+          consumers,
         })
       );
+      await context.authorization.bulkEnsureAuthorized({
+        ruleTypeIdConsumersPairs,
+        operation: WriteOperations.Create,
+        entity: AlertingAuthorizationEntity.Rule,
+      });
     } catch (error) {
       context.auditLogger?.log(
         ruleAuditEvent({
-          action: RuleAuditAction.CREATE,
-          savedObject: { type: RULE_SAVED_OBJECT_TYPE, id: ruleData.id, name: ruleData.name },
+          action: RuleAuditAction.BULK_CREATE,
           error,
         })
       );
@@ -204,9 +214,7 @@ export async function bulkCreateRules<Params extends RuleParams = never>(
         params: updatedParams,
         actions: actionsWithRefs,
         artifacts: artifactsWithRefs,
-      } = await withSpan({ name: 'extractReferences', type: 'rules' }, () =>
-        extractReferences(context, ruleType, allActions, ruleData.params, artifacts)
-      );
+      } = await extractReferences(context, ruleType, allActions, ruleData.params, artifacts);
       const createTime = Date.now();
       const lastRunTimestamp = new Date();
       const notifyWhen = getRuleNotifyWhenType(
@@ -303,6 +311,7 @@ export async function bulkCreateRules<Params extends RuleParams = never>(
       };
     });
 
+  // TODO: enabled rules don't run
   await withSpan({ name: 'taskManager.bulkSchedule', type: 'tasks' }, () =>
     context.taskManager.bulkSchedule(tasksToSchedule)
   );

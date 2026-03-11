@@ -15,6 +15,7 @@ import {
 
 export enum RuleAuditAction {
   CREATE = 'rule_create',
+  BULK_CREATE = 'rule_bulk_create',
   GET = 'rule_get',
   BULK_GET = 'rule_bulk_get',
   RESOLVE = 'rule_resolve',
